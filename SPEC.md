@@ -51,6 +51,7 @@ Results are positional (`{columns: string[], rows: unknown[][]}`). `query` reads
 The driver applies database-level read-only and timeout settings from its own config.
 
 ## CLI
+- `add --url <url|->` (or `DEEBEEBRIDGE_URL`) fills every server field from one connection string; flags override it.
 - `add`: prompts for type, name, host, port, database, user, password, SSL, mode, row limit (flags skip prompts; password via `--password-stdin` or `DEEBEEBRIDGE_PASSWORD`). Pings first; on failure offers retry / edit / cancel. Saves keychain first, then config, and undoes the keychain entry if config fails.
 - `list [--json]`, `test <name>`, `mcp`.
 - Planned: `edit`, `remove`, `install claude|cursor` (`claude mcp add deebeebridge -- deebeebridge mcp`; merge into `~/.cursor/mcp.json` without clobbering other servers).

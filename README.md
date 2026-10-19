@@ -28,6 +28,17 @@ deebeebridge --help
 deebeebridge add
 ```
 
+Or paste a connection URL (Postgres: `postgres://` or `postgresql://`; MySQL: `mysql://`). It supplies the
+host, port, database, user, password and SSL setting; only the connection name is left to type:
+
+```bash
+echo 'postgresql://user:pass@db.example.com/app?sslmode=require' | deebeebridge add --url - --name app-db
+```
+
+`--url -` reads the URL from stdin, and `DEEBEEBRIDGE_URL` works too. Avoid `--url '<url>'` on the command
+line: the password would sit in your shell history and process list. Flags such as `--mode read-write` override the URL.
+Special characters in the password must be percent-encoded (`@` → `%40`).
+
 Or in a script, with flags and the password on stdin:
 
 ```bash
@@ -101,7 +112,8 @@ Deeper: [connections](docs/connections.md) · [PostgreSQL](docs/postgres.md) · 
 |---|---|
 | Config directory | `~/.deebeebridge/` (override with `DEEBEEBRIDGE_HOME`) |
 | Keychain service | `deebeebridge`, one entry per connection name |
-| Password for non-interactive `add` | `--password-stdin` or `DEEBEEBRIDGE_PASSWORD` |
+| Password for non-interactive `add` | `--password-stdin`, `DEEBEEBRIDGE_PASSWORD`, or inside the `--url` |
+| Connection URL for `add` | `--url <url>`, `--url -` (stdin) or `DEEBEEBRIDGE_URL` |
 
 ## Status
 

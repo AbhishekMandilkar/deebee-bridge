@@ -36,6 +36,13 @@ Set `DEEBEEBRIDGE_HOME` to use a different directory (used by tests).
 | `deebeebridge test <name>` | Connects with the stored password and reports latency. |
 | `deebeebridge mcp` | Starts the stdio [MCP server](mcp.md). |
 
+**From a URL:** `deebeebridge add --url - --name app-db` reads `scheme://user:password@host:port/database?sslmode=require`
+from stdin (or pass `--url <url>`, or set `DEEBEEBRIDGE_URL`). The URL supplies type, host, port (else the source's default),
+database, user, password and SSL; `mode` defaults to `read-only` and `rowLimit` to 500, and any explicit flag wins over the URL.
+SSL turns on for `sslmode`/`ssl-mode` values `require`, `verify-ca`, `verify-full`, `required`, `verify_identity` or `ssl=true`; anything else
+(including `prefer`) leaves it off. Error messages never repeat the URL. Parsing lives in `core/src/connection-url.ts`; each source
+declares its schemes in `DriverDefinition.urlSchemes`.
+
 Non-interactive `add`: pass `--type --name --host --port --database --user --ssl|--no-ssl --mode --row-limit`
 and supply the password with `--password-stdin` or the `DEEBEEBRIDGE_PASSWORD` environment variable.
 
@@ -75,6 +82,7 @@ A source is one `DriverDefinition` (`drivers/types.ts`):
 export const mysqlDriver: DriverDefinition = {
   label: "MySQL",          // shown in the `add` type picker
   defaultPort: 3306,       // default offered by `add`
+  urlSchemes: ["mysql"],   // accepted by `add --url`
   dialect: "mysql",        // grammar for the read-only classifier
   create(config, password) { /* return a Driver; connect lazily */ },
 };
