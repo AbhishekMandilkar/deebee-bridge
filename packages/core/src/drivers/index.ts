@@ -1,5 +1,5 @@
 import type { ConnectionConfig } from "../connection.js";
-import { BridgeError, toBridgeError } from "../errors.js";
+import { BridgeError, type ErrorCode, toBridgeError } from "../errors.js";
 import { mysqlDriver as mysql } from "./mysql.js";
 import { postgres } from "./postgres.js";
 import type { Driver, DriverDefinition } from "./types.js";
@@ -20,11 +20,40 @@ export function getDriverDefinition(type: string): DriverDefinition {
 	return def;
 }
 
+/**
+ * Every error leaving a driver is a BridgeError with the password masked, whatever the
+ * source library put in its message. Done here once so new sources cannot forget it.
+ */
+export function redactErrors(driver: Driver, password: string): Driver {
+	const guard =
+		<A extends unknown[], R>(
+			fn: (...args: A) => Promise<R>,
+			fallback: ErrorCode,
+		) =>
+		async (...args: A): Promise<R> => {
+			try {
+				return await fn(...args);
+			} catch (err) {
+				throw toBridgeError(err, [password], fallback);
+			}
+		};
+	return {
+		ping: guard(() => driver.ping(), "CONNECTION_FAILED"),
+		listTables: guard((s) => driver.listTables(s), "QUERY_ERROR"),
+		describeTable: guard((t, s) => driver.describeTable(t, s), "QUERY_ERROR"),
+		query: guard((sql, opts) => driver.query(sql, opts), "QUERY_ERROR"),
+		close: () => driver.close(),
+	};
+}
+
 export function createDriver(
 	config: ConnectionConfig,
 	password: string,
 ): Driver {
-	return getDriverDefinition(config.type).create(config, password);
+	return redactErrors(
+		getDriverDefinition(config.type).create(config, password),
+		password,
+	);
 }
 
 /** Connect, ping, disconnect. Returns latency in ms; throws a redacted BridgeError. */
@@ -37,8 +66,6 @@ export async function probe(
 	try {
 		await driver.ping();
 		return Math.round(performance.now() - start);
-	} catch (err) {
-		throw toBridgeError(err, [password]);
 	} finally {
 		await driver.close().catch(() => {});
 	}
