@@ -1,0 +1,17 @@
+# Throwaway databases for integration tests. Add a service per supported source.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secretpw
+      POSTGRES_DB: postgres
+    ports:
+      - "54329:5432"
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: secretpw
+      MYSQL_DATABASE: app
+    ports:
+      - "33069:3306"
