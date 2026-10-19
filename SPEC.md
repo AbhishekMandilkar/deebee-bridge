@@ -1,177 +1,82 @@
-# dbbridge: CLI + MCP Server for MySQL & ClickHouse
+# deebeebridge: CLI + MCP server for databases
 
-> Implementation spec for a coding agent. `dbbridge` is a working name; rename freely.
+> Living design doc. It started as an implementation brief and now records what is built and what
+> is planned. When a better design appears, build it and update this file. Details live in [`docs/`](docs/connections.md).
 
 ## Goal
-Stop pasting database credentials into AI agents. Users register DB connections once through an
+Stop pasting database credentials into AI agents. Users register connections once through an
 interactive CLI. Passwords live in the OS keychain. A local stdio MCP server exposes those
-connections **by name only** to Claude Code, Cursor, and other MCP clients.
+connections **by name only** to Claude Code, Cursor and other MCP clients, with small outputs so
+agents' context windows stay free.
 
 ## Scope
-**In scope:** CLI for managing connections, stdio MCP server, MySQL and ClickHouse support.
-**Out of scope:** GUI/desktop app, HTTP transport, cloud sync, other databases.
+**Built:** PostgreSQL and MySQL; `add`, `list`, `test`, `mcp`; four MCP tools; read-only enforcement.
+**Planned:** `edit`, `remove`, `install <claude|cursor>`, audit log, ClickHouse driver.
+**Out of scope:** GUI/desktop app (core is kept protocol-free so one could reuse it), HTTP transport, cloud sync.
 
-## Tech Stack
-- TypeScript, Node 20+, ESM
-- CLI: `commander` + `@inquirer/prompts`
-- MCP: `@modelcontextprotocol/sdk` (stdio transport only)
-- Keychain: `@napi-rs/keyring`
-- MySQL: `mysql2/promise`
-- ClickHouse: `@clickhouse/client`
-- Validation: `zod`
-- SQL parsing: `node-sql-parser` (MySQL dialect) for read-only checks
-- Tests: `vitest`
-- Build: `tsup`; publish as an npm package with `"bin": { "dbbridge": "dist/cli.js" }`
+## Design rules
+- Adding a database source is one `DriverDefinition` file plus one registry line ([connections.md](docs/connections.md)).
+- Needs keychain, filesystem or a database driver → `packages/core`. Argument parsing, prompts, MCP wiring → `packages/cli`. Browser-safe → `apps/web`, `packages/ui`.
+- Never write passwords to disk, logs, stdout or MCP responses. Every driver error is masked in one place (`redactErrors`).
+- stdout of `deebeebridge mcp` is MCP protocol only.
+- Tool definitions and results are paid for in every agent session: keep them terse ([mcp.md](docs/mcp.md)).
 
-## Project Layout (single package)
+## Tech stack
+TypeScript (ESM, Node 20+), Bun workspaces + Turborepo, `commander`, `@inquirer/prompts`,
+`@modelcontextprotocol/sdk`, `@napi-rs/keyring`, `pg` + `pg-cursor`, `mysql2`, `zod`, `node-sql-parser`, `vitest`, `tsup`.
+The npm package is `deebeebridge` (`packages/cli`); `@deebeebridge/core` is private and bundled into it.
+
+## Layout
 ```
-src/
-  cli.ts                 # entry: commander setup
-  commands/
-    add.ts  list.ts  test.ts  edit.ts  remove.ts  mcp.ts  install.ts
-  core/
-    config.ts            # read/write ~/.dbbridge/connections.json (atomic writes)
-    secrets.ts           # keychain get/set/delete
-    registry.ts          # connection CRUD combining config + secrets
-    drivers/
-      types.ts           # Driver interface
-      mysql.ts
-      clickhouse.ts
-    safety.ts            # read-only classifier, limit injection, size caps
-    audit.ts             # append-only query log
-    errors.ts            # typed error codes + redaction
-  mcp/
-    server.ts            # registers tools, maps errors to MCP errors
-    tools/*.ts
-test/
-docker-compose.yml       # MySQL 8 + ClickHouse for integration tests
+packages/core/src
+  connection.ts   zod schema, name rule      config.ts    ~/.deebeebridge/connections.json (0600, atomic)
+  secrets.ts      keychain / in-memory       registry.ts  connection CRUD over config + secrets
+  drivers/        types.ts, index.ts, postgres.ts, mysql.ts
+  safety.ts       read-only classifier       serialize.ts value + size caps
+  bridge.ts       what an agent may do with a named connection
+  errors.ts       typed codes + redaction
+packages/cli/src
+  cli.ts, commands/{add,list,test,mcp}.ts, mcp/{server,tools}.ts
 ```
 
-## Data Model
-Non-secret config at `~/.dbbridge/connections.json` (file mode `0600`, dir `0700`):
-```json
-{
-  "version": 1,
-  "connections": [
-    {
-      "name": "prod-mysql",
-      "type": "mysql",
-      "host": "db.example.com",
-      "port": 3306,
-      "database": "app",
-      "user": "readonly",
-      "ssl": true,
-      "mode": "read-only",
-      "rowLimit": 500,
-      "timeoutMs": 15000,
-      "createdAt": "2026-10-19T00:00:00Z"
-    }
-  ]
-}
-```
-- `type`: `"mysql" | "clickhouse"`; `mode`: `"read-only" | "read-write"`
-- Connection names: `^[a-z0-9][a-z0-9-_]{0,62}$`, unique
+## Data model
+`~/.deebeebridge/connections.json` (override the directory with `DEEBEEBRIDGE_HOME`):
+`name` (`^[a-z0-9][a-z0-9-_]{0,62}$`, unique), `type` (a key of `drivers`), `host`, `port`, `database`, `user`,
+`ssl`, `mode` (`read-only` default | `read-write`), `rowLimit` (500), `timeoutMs` (15000), `createdAt`.
+Password: OS keychain, service `deebeebridge`, account = connection name.
 
-**Secrets:** password only, in the OS keychain. Service `dbbridge`, account = connection name.
-Never write passwords to disk, logs, stdout, or MCP responses.
+## Driver interface (`drivers/types.ts`)
+`ping`, `listTables(schema?)`, `describeTable(table, schema?)`, `query(sql, {params?, limit})`, `close`.
+Results are positional (`{columns: string[], rows: unknown[][]}`). `query` reads at most `limit + 1` rows.
+The driver applies database-level read-only and timeout settings from its own config.
 
-## Driver Interface
-```ts
-interface Driver {
-  ping(): Promise<void>;
-  listDatabases(): Promise<string[]>;
-  listTables(db?: string): Promise<{ name: string; type: string; rows?: number }[]>;
-  describeTable(table: string, db?: string): Promise<TableSchema>;
-  query(sql: string, opts: { params?: unknown[]; limit: number; timeoutMs: number; readOnly: boolean }):
-    Promise<{ columns: { name: string; type: string }[]; rows: unknown[][]; durationMs: number }>;
-  explain(sql: string): Promise<unknown>;
-  close(): Promise<void>;
-}
-```
-- Lazily create one pool per connection inside the MCP process and reuse it; close all on exit.
-- MySQL: set `MAX_EXECUTION_TIME` per query; use `SET SESSION TRANSACTION READ ONLY` for read-only connections.
-- ClickHouse: pass `readonly: 1` and `max_execution_time` settings per query on read-only connections; use `JSONCompact` format.
-- Serialize BigInt, Date, Buffer safely (strings / ISO / base64).
+## CLI
+- `add`: prompts for type, name, host, port, database, user, password, SSL, mode, row limit (flags skip prompts; password via `--password-stdin` or `DEEBEEBRIDGE_PASSWORD`). Pings first; on failure offers retry / edit / cancel. Saves keychain first, then config, and undoes the keychain entry if config fails.
+- `list [--json]`, `test <name>`, `mcp`.
+- Planned: `edit`, `remove`, `install claude|cursor` (`claude mcp add deebeebridge -- deebeebridge mcp`; merge into `~/.cursor/mcp.json` without clobbering other servers).
 
-## CLI Commands
-### `dbbridge add`
-1. Select type (MySQL / ClickHouse)
-2. Prompt: name, host, port (default 3306 / 8123), database, user, password (masked), SSL (y/n)
-3. Prompt: mode (default **read-only**), row limit (default 500)
-4. Test the connection with a ping. On failure show the redacted error and offer: retry, edit fields, cancel.
-5. On success, save the password to the keychain, then the config. If the config write fails, delete the keychain entry.
+## MCP tools
+Four tools, every one takes `connection` (a name; no tool accepts credentials):
+`list_connections`, `list_tables(schema?)`, `describe_table(table, schema?)`, `run_query(sql, params?)`.
+`list_databases`, `sample_rows` and `explain_query` were dropped on purpose: `run_query` covers them and each tool costs context.
+Output is compact JSON. Rows are capped at the connection's `rowLimit`, cells at 2000 characters, responses at 64 KB, each with `truncated` set.
 
-Also support non-interactive flags (`--type --name --host --port --database --user --ssl --mode`)
-with the password from `--password-stdin` or the `DBBRIDGE_PASSWORD` env var, for scripting.
-
-### Other commands
-- `dbbridge list`: table of connections (no secrets); `--json` option
-- `dbbridge test <name>`: ping and report latency
-- `dbbridge edit <name>`: re-prompt with current values as defaults; re-test before saving
-- `dbbridge remove <name>`: confirm, then delete config entry and keychain entry
-- `dbbridge mcp`: start the MCP server over stdio. **Nothing but MCP protocol on stdout;** logs go to stderr.
-- `dbbridge install <claude|cursor>`:
-  - Claude Code: run or print `claude mcp add dbbridge -- dbbridge mcp`
-  - Cursor: merge into `~/.cursor/mcp.json` without clobbering other servers:
-    `{ "mcpServers": { "dbbridge": { "command": "dbbridge", "args": ["mcp"] } } }`
-
-## MCP Tools
-Every tool takes `connection` (a name). None accept credentials.
-
-| Tool | Input | Output |
-|---|---|---|
-| `list_connections` | — | name, type, database, mode |
-| `list_databases` | connection | database names |
-| `list_tables` | connection, database? | table names, types, approx rows |
-| `describe_table` | connection, table, database? | columns, types, nullability, keys, indexes |
-| `sample_rows` | connection, table, database?, limit ≤ 50 | columns + rows |
-| `run_query` | connection, sql, params? | columns, rows, rowCount, truncated, durationMs |
-| `explain_query` | connection, sql | query plan |
-
-Write tool descriptions so an agent knows to call `list_connections` and `describe_table` first,
-and that results are capped.
-
-Return results as compact JSON text content. Quote identifiers safely in `sample_rows`/`describe_table`;
-never interpolate user strings into SQL there.
-
-## Safety Rules
-- New connections default to read-only. Suggest a DB user with read-only grants during `add`.
-- `run_query` on read-only connections:
-  - Allow only `SELECT`, `WITH … SELECT`, `SHOW`, `DESCRIBE`/`DESC`, `EXPLAIN`
-  - Reject multiple statements, `SELECT … INTO OUTFILE/DUMPFILE`, `LOAD DATA`, locking reads (`FOR UPDATE`)
-  - If parsing fails, **reject** (fail closed)
-  - Defense in depth: DB-level read-only settings above apply even if the classifier is wrong
-- Enforce the row limit (add or tighten `LIMIT`, or stop reading at limit + 1 to set `truncated`)
-- Cap response size at 1 MB; truncate rows and set `truncated: true`
-- Redact passwords and connection strings from all errors and logs
-- Audit log at `~/.dbbridge/audit.log` (JSON lines: timestamp, connection, tool, sql, rowCount, durationMs, status). No result data.
+## Safety
+- New connections are read-only. Two layers on read-only connections:
+  1. Classifier (`safety.ts`): one statement; `SELECT`/`WITH…SELECT`/`SHOW`/`DESCRIBE`, or `EXPLAIN` of a `SELECT`. Rejects `INTO`, locking reads (anywhere in the tree, including UNION branches and subqueries), MySQL version-conditional comments, and anything unparseable (fails closed).
+  2. Database: Postgres `BEGIN READ ONLY` per query; MySQL `SET SESSION TRANSACTION READ ONLY`, confirmed before the first query on each connection.
+- A database user with read-only grants remains the real guarantee; the CLI suggests one.
+- Planned: audit log `~/.deebeebridge/audit.log` (JSON lines: timestamp, connection, tool, sql, rowCount, durationMs, status; no result data).
 
 ## Errors
-Typed codes, returned as MCP tool errors with an actionable message:
-`CONNECTION_NOT_FOUND`, `SECRET_MISSING`, `AUTH_FAILED`, `CONNECTION_FAILED`,
+`CONNECTION_NOT_FOUND`, `CONNECTION_EXISTS`, `INVALID_CONNECTION`, `SECRET_MISSING`, `AUTH_FAILED`, `CONNECTION_FAILED`,
 `QUERY_REJECTED_READONLY`, `QUERY_PARSE_FAILED`, `TIMEOUT`, `QUERY_ERROR`.
-Example: `QUERY_REJECTED_READONLY: "prod-mysql" is read-only; only SELECT/SHOW/DESCRIBE/EXPLAIN are allowed.`
+MCP returns `isError: true` with `CODE: message`.
 
 ## Testing
-- **Unit:** read-only classifier with many edge cases (comments hiding statements, CTEs, mixed case,
-  `INTO OUTFILE`, semicolons in strings, multi-statements, ClickHouse-specific syntax), limit injection,
-  redaction, config read/write
-- **Integration:** `docker-compose up` MySQL 8 + ClickHouse with seed data; exercise every tool end to end
-- **MCP:** verify with `npx @modelcontextprotocol/inspector dbbridge mcp`
-- Mock the keychain in CI
+Unit: classifier edge cases, serialization caps, redaction, config and registry (temp dir + in-memory secrets), MCP tool list, size budget and error mapping.
+Live: `docker compose up -d`, then run core tests with `DEEBEEBRIDGE_TEST_PG` / `DEEBEEBRIDGE_TEST_MYSQL` ([connections.md](docs/connections.md#testing)).
+Manual: `npx @modelcontextprotocol/inspector deebeebridge mcp`.
 
-## Build Order
-1. Config + keychain + registry
-2. MySQL driver, then `add` / `list` / `test`
-3. Safety module + tests
-4. MCP server with all tools on MySQL
-5. ClickHouse driver
-6. `edit`, `remove`, `install`, audit log
-7. README with setup and client config examples
-
-## Acceptance Criteria
-- `dbbridge add` saves working MySQL and ClickHouse connections; the password exists only in the keychain
-- In Claude Code, an agent can list tables and run a SELECT using only the connection name
-- Writes are rejected on read-only connections, both by the classifier and by the database
-- No credentials appear in any MCP response, log, or config file
-- `dbbridge mcp` prints nothing to stdout except MCP protocol messages
+## Known gaps
+`describe_table` output is not size-capped. `EXPLAIN` of non-SELECT statements and the MySQL `EXPLAIN <table>` synonym are rejected. Postgres `FOR UPDATE` and writable CTEs fail to parse and so surface as `QUERY_PARSE_FAILED`. TLS with a private CA is not supported yet.
