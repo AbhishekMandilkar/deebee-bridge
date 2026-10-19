@@ -1,9 +1,9 @@
-import { type ConfigStore, configStore } from "./config.js";
-import { type ConnectionConfig, connectionSchema } from "./connection.js";
-import { createDriver } from "./drivers/index.js";
-import type { Driver } from "./drivers/types.js";
-import { BridgeError } from "./errors.js";
-import { keychainSecrets, type SecretStore } from "./secrets.js";
+import { type ConfigStore, configStore } from "./config";
+import { type ConnectionConfig, connectionSchema } from "./connection";
+import { createDriver } from "./drivers/index";
+import type { Driver } from "./drivers/types";
+import { BridgeError } from "./errors";
+import { keychainSecrets, type SecretStore } from "./secrets";
 
 /**
  * Connection CRUD over config (non-secret) + secrets (password). Callers never

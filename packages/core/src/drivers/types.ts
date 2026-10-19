@@ -1,4 +1,4 @@
-import type { ConnectionConfig } from "../connection.js";
+import type { ConnectionConfig } from "../connection";
 
 export type SqlDialect = "mysql" | "postgresql";
 

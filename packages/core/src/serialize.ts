@@ -1,4 +1,4 @@
-import type { Table } from "./drivers/types.js";
+import type { Table } from "./drivers/types";
 
 /** Caps that keep tool output small enough for an agent's context window. */
 export const MAX_CELL_CHARS = 2_000;

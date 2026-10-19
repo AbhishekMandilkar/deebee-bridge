@@ -1,5 +1,5 @@
 import type { Registry } from "@deebeebridge/core";
-import { table } from "../io.js";
+import { table } from "../io";
 
 export async function listCommand(
 	registry: Registry,

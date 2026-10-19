@@ -11,7 +11,7 @@ import {
 	memorySecrets,
 	redact,
 	toBridgeError,
-} from "../src/index.js";
+} from "../src/index";
 
 const conn = (over: Partial<ConnectionConfig> = {}): ConnectionConfig => ({
 	name: "local-pg",

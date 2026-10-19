@@ -1,7 +1,7 @@
 import pg from "pg";
 import Cursor from "pg-cursor";
-import { BridgeError, type ErrorCode } from "../errors.js";
-import type { DriverDefinition, Table, TableSchema } from "./types.js";
+import { BridgeError, type ErrorCode } from "../errors";
+import type { DriverDefinition, Table, TableSchema } from "./types";
 
 const AUTH_SQLSTATES = new Set(["28000", "28P01"]);
 const QUERY_CANCELED = "57014"; // statement_timeout

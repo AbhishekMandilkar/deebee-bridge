@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertReadOnly } from "../src/index.js";
+import { assertReadOnly } from "../src/index";
 
 const dialects = ["mysql", "postgresql"] as const;
 

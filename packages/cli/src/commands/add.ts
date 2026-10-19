@@ -14,7 +14,7 @@ import {
 	input,
 	select,
 } from "@inquirer/prompts";
-import { readStdin } from "../io.js";
+import { readStdin } from "../io";
 
 export interface AddFlags {
 	type?: string;

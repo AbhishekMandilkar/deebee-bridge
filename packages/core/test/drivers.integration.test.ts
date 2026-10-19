@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type ConnectionConfig, DEFAULTS, probe } from "../src/index.js";
+import { type ConnectionConfig, DEFAULTS, probe } from "../src/index";
 
 // Live servers, opt-in per source: host:port:database:user:password
 const targets = {

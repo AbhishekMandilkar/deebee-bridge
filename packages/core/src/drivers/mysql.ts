@@ -1,7 +1,7 @@
 import type { Connection as CallbackConnection } from "mysql2";
 import mysql from "mysql2/promise";
-import { BridgeError, type ErrorCode } from "../errors.js";
-import type { DriverDefinition, Table, TableSchema } from "./types.js";
+import { BridgeError, type ErrorCode } from "../errors";
+import type { DriverDefinition, Table, TableSchema } from "./types";
 
 const ACCESS_DENIED = new Set([
 	"ER_ACCESS_DENIED_ERROR",

@@ -1,24 +1,24 @@
-export { type Bridge, createBridge } from "./bridge.js";
-export { type ConfigStore, configStore, defaultHome } from "./config.js";
+export { type Bridge, createBridge } from "./bridge";
+export { type ConfigStore, configStore, defaultHome } from "./config";
 export {
 	CONNECTION_NAME_PATTERN,
 	type ConnectionConfig,
 	connectionSchema,
 	DEFAULTS,
-} from "./connection.js";
-export { drivers, getDriverDefinition, probe } from "./drivers/index.js";
+} from "./connection";
+export { drivers, getDriverDefinition, probe } from "./drivers/index";
 export type {
 	Driver,
 	DriverDefinition,
 	Table,
 	TableSchema,
-} from "./drivers/types.js";
+} from "./drivers/types";
 export {
 	BridgeError,
 	type ErrorCode,
 	redact,
 	toBridgeError,
-} from "./errors.js";
-export { createRegistry, type Registry } from "./registry.js";
-export { assertReadOnly } from "./safety.js";
-export { keychainSecrets, memorySecrets, type SecretStore } from "./secrets.js";
+} from "./errors";
+export { createRegistry, type Registry } from "./registry";
+export { assertReadOnly } from "./safety";
+export { keychainSecrets, memorySecrets, type SecretStore } from "./secrets";

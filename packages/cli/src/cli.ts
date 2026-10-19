@@ -1,9 +1,9 @@
 import { BridgeError, createRegistry, redact } from "@deebeebridge/core";
 import { Command } from "commander";
-import { type AddFlags, addCommand } from "./commands/add.js";
-import { listCommand } from "./commands/list.js";
-import { mcpCommand } from "./commands/mcp.js";
-import { testCommand } from "./commands/test.js";
+import { type AddFlags, addCommand } from "./commands/add";
+import { listCommand } from "./commands/list";
+import { mcpCommand } from "./commands/mcp";
+import { testCommand } from "./commands/test";
 
 const program = new Command()
 	.name("deebeebridge")

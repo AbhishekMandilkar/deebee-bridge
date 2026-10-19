@@ -9,7 +9,7 @@ import {
 	createRegistry,
 	DEFAULTS,
 	memorySecrets,
-} from "../src/index.js";
+} from "../src/index";
 
 // Live servers, opt-in per source: host:port:database:user:password
 const targets = {

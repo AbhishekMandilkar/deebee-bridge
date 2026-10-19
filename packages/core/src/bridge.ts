@@ -1,9 +1,9 @@
-import type { ConnectionConfig } from "./connection.js";
-import { getDriverDefinition } from "./drivers/index.js";
-import type { Driver, TableSchema } from "./drivers/types.js";
-import type { Registry } from "./registry.js";
-import { assertReadOnly } from "./safety.js";
-import { capOutput } from "./serialize.js";
+import type { ConnectionConfig } from "./connection";
+import { getDriverDefinition } from "./drivers/index";
+import type { Driver, TableSchema } from "./drivers/types";
+import type { Registry } from "./registry";
+import { assertReadOnly } from "./safety";
+import { capOutput } from "./serialize";
 
 /**
  * What an agent may do with a saved connection, addressed by name. Owns driver

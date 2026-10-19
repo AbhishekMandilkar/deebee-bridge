@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { drivers } from "./drivers/index.js";
+import { drivers } from "./drivers/index";
 
 export const CONNECTION_NAME_PATTERN = /^[a-z0-9][a-z0-9-_]{0,62}$/;
 

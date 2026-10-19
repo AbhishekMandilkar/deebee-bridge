@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { redactErrors } from "../src/drivers/index.js";
-import type { Driver } from "../src/drivers/types.js";
-import { BridgeError } from "../src/index.js";
+import { redactErrors } from "../src/drivers/index";
+import type { Driver } from "../src/drivers/types";
+import { BridgeError } from "../src/index";
 
 const failing = (message: string, code?: "TIMEOUT"): Driver => {
 	const fail = async () => {

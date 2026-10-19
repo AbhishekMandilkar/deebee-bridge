@@ -4,7 +4,7 @@ import {
 	MAX_CELL_CHARS,
 	MAX_RESPONSE_CHARS,
 	toJsonValue,
-} from "../src/serialize.js";
+} from "../src/serialize";
 
 describe("toJsonValue", () => {
 	it("makes bigint, Date and Buffer JSON-safe", () => {

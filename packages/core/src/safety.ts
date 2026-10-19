@@ -1,6 +1,6 @@
 import sqlParser from "node-sql-parser";
-import type { SqlDialect } from "./drivers/types.js";
-import { BridgeError } from "./errors.js";
+import type { SqlDialect } from "./drivers/types";
+import { BridgeError } from "./errors";
 
 const parser = new sqlParser.Parser();
 

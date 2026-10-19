@@ -1,7 +1,7 @@
 import { type Bridge, createBridge, type Registry } from "@deebeebridge/core";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { registerTools } from "./tools.js";
+import { registerTools } from "./tools";
 
 export function createMcpServer(bridge: Bridge): McpServer {
 	const server = new McpServer({ name: "deebeebridge", version: "0.0.0" });

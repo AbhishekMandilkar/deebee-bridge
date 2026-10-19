@@ -2,8 +2,8 @@ import { randomBytes } from "node:crypto";
 import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { type ConnectionConfig, configFileSchema } from "./connection.js";
-import { BridgeError } from "./errors.js";
+import { type ConnectionConfig, configFileSchema } from "./connection";
+import { BridgeError } from "./errors";
 
 export function defaultHome(): string {
 	return process.env.DEEBEEBRIDGE_HOME ?? join(homedir(), ".deebeebridge");
