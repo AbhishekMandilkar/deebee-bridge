@@ -1,5 +1,6 @@
 import { BridgeError, createRegistry, redact } from "@deebeebridge/core";
 import { Command } from "commander";
+import pkg from "../package.json";
 import { type AddFlags, addCommand } from "./commands/add";
 import { listCommand } from "./commands/list";
 import { mcpCommand } from "./commands/mcp";
@@ -7,6 +8,7 @@ import { testCommand } from "./commands/test";
 
 const program = new Command()
 	.name("deebeebridge")
+	.version(pkg.version)
 	.description(
 		"Register database connections once; let AI agents use them by name.",
 	);
