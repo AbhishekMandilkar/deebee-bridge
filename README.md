@@ -136,3 +136,7 @@ DEEBEEBRIDGE_TEST_MYSQL=127.0.0.1:33069:app:root:secretpw bunx vitest run
 Run Biome on the files you touch (`bunx biome check --write <paths>`), not `bun run check`: the web
 scaffold is 2-space indented and the root command would reformat about 46 of its files.
 To add a database, see [Adding a new database source](docs/connections.md#adding-a-new-database-source).
+
+## License
+
+[MIT](LICENSE)
