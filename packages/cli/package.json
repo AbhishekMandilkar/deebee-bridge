@@ -1,7 +1,27 @@
 {
 	"name": "deebeebridge",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "CLI and MCP server that exposes database connections to AI agents by name, without sharing credentials.",
+	"license": "MIT",
+	"keywords": [
+		"mcp",
+		"model-context-protocol",
+		"database",
+		"postgres",
+		"mysql",
+		"ai-agents",
+		"claude-code",
+		"cursor"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/AbhishekMandilkar/deebee-bridge.git",
+		"directory": "packages/cli"
+	},
+	"homepage": "https://github.com/AbhishekMandilkar/deebee-bridge#readme",
+	"bugs": {
+		"url": "https://github.com/AbhishekMandilkar/deebee-bridge/issues"
+	},
 	"type": "module",
 	"bin": {
 		"deebeebridge": "dist/cli.js"
@@ -16,7 +36,9 @@
 		"build": "tsup",
 		"dev": "tsup --watch",
 		"check-types": "tsc --noEmit",
-		"test": "vitest run"
+		"test": "vitest run",
+		"prepack": "bun run build && cp ../../README.md ../../LICENSE .",
+		"postpack": "rm -f README.md LICENSE"
 	},
 	"dependencies": {
 		"@clickhouse/client": "^1.24.1",
@@ -37,5 +59,8 @@
 		"tsup": "^9.0.0",
 		"typescript": "catalog:",
 		"vitest": "^5.0.5"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }
