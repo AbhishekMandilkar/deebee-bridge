@@ -6,6 +6,7 @@ export {
 	connectionSchema,
 	DEFAULTS,
 } from "./connection";
+export { type ParsedConnectionUrl, parseConnectionUrl } from "./connection-url";
 export { drivers, getDriverDefinition, probe } from "./drivers/index";
 export type {
 	Driver,

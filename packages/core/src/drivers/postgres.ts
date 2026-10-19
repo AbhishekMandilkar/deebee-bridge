@@ -18,6 +18,7 @@ function mapError(err: unknown, fallback: ErrorCode): BridgeError {
 export const postgres: DriverDefinition = {
 	label: "PostgreSQL",
 	defaultPort: 5432,
+	urlSchemes: ["postgres", "postgresql"],
 	dialect: "postgresql",
 	create(config, password) {
 		const readOnly = config.mode === "read-only";

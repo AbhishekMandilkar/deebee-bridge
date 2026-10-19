@@ -45,6 +45,8 @@ export interface DriverDefinition {
 	/** Human name shown in prompts. */
 	label: string;
 	defaultPort: number;
+	/** URL schemes that select this source, e.g. ["postgres", "postgresql"]. */
+	urlSchemes: string[];
 	/** SQL dialect name for the read-only classifier (node-sql-parser). */
 	dialect: SqlDialect;
 	/** Build a driver. Must not touch the network until a method is called. */

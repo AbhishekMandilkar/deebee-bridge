@@ -22,6 +22,7 @@ function mapError(err: unknown, fallback: ErrorCode): BridgeError {
 export const mysqlDriver: DriverDefinition = {
 	label: "MySQL",
 	defaultPort: 3306,
+	urlSchemes: ["mysql"],
 	dialect: "mysql",
 	create(config, password) {
 		let pool: mysql.Pool | undefined;
