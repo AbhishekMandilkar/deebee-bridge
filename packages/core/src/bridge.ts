@@ -16,7 +16,7 @@ export function createBridge(registry: Registry) {
 		Promise<{ config: ConnectionConfig; driver: Driver }>
 	>();
 
-	function use(name: string) {
+	function driverFor(name: string) {
 		let entry = open.get(name);
 		if (!entry) {
 			entry = registry.open(name);
@@ -38,7 +38,7 @@ export function createBridge(registry: Registry) {
 		},
 
 		async listTables(connection: string, schema?: string) {
-			const { driver } = await use(connection);
+			const { driver } = await driverFor(connection);
 			return capOutput(await driver.listTables(schema));
 		},
 
@@ -47,12 +47,12 @@ export function createBridge(registry: Registry) {
 			table: string,
 			schema?: string,
 		): Promise<TableSchema> {
-			const { driver } = await use(connection);
+			const { driver } = await driverFor(connection);
 			return driver.describeTable(table, schema);
 		},
 
 		async runQuery(connection: string, sql: string, params?: unknown[]) {
-			const { config, driver } = await use(connection);
+			const { config, driver } = await driverFor(connection);
 			if (config.mode === "read-only") {
 				assertReadOnly(
 					sql,
