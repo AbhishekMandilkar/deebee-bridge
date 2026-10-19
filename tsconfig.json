@@ -1,0 +1,3 @@
+{
+  "extends": "@deebeebridge/config/tsconfig.base.json"
+}
