@@ -26,6 +26,10 @@ program
 	.option("--mode <mode>", "read-only | read-write")
 	.option("--row-limit <n>")
 	.option(
+		"--url <url>",
+		"connection URL, e.g. postgres://user:pass@host:5432/db?sslmode=require ('-' reads it from stdin; or set DEEBEEBRIDGE_URL)",
+	)
+	.option(
 		"--password-stdin",
 		"read the password from stdin (or set DEEBEEBRIDGE_PASSWORD)",
 	)

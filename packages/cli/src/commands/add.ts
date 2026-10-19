@@ -1,9 +1,11 @@
 import {
+	BridgeError,
 	CONNECTION_NAME_PATTERN,
 	type ConnectionConfig,
 	DEFAULTS,
 	drivers,
 	getDriverDefinition,
+	parseConnectionUrl,
 	probe,
 	type Registry,
 	toBridgeError,
@@ -26,7 +28,39 @@ export interface AddFlags {
 	ssl?: boolean;
 	mode?: string;
 	rowLimit?: string;
+	/** A connection URL, or "-" to read it from stdin. Explicit flags override its fields. */
+	url?: string;
 	passwordStdin?: boolean;
+}
+
+/** Fields a URL supplies become flags, so the prompt-or-flag logic stays in one place. */
+async function applyUrl(
+	flags: AddFlags,
+): Promise<{ flags: AddFlags; password?: string }> {
+	const raw =
+		flags.url === "-"
+			? (await readStdin()).trim()
+			: (flags.url ?? process.env.DEEBEEBRIDGE_URL);
+	if (!raw) return { flags };
+	const u = parseConnectionUrl(raw);
+	const def = getDriverDefinition(u.type);
+	return {
+		password: u.password,
+		flags: {
+			// A URL describes the server; the rest take safe defaults instead of prompts.
+			mode: DEFAULTS.mode,
+			rowLimit: String(DEFAULTS.rowLimit),
+			type: u.type,
+			host: u.host,
+			port: String(u.port ?? def.defaultPort),
+			database: u.database,
+			user: u.user,
+			ssl: u.ssl,
+			...Object.fromEntries(
+				Object.entries(flags).filter(([, v]) => v !== undefined),
+			),
+		},
+	};
 }
 
 type Answers = Omit<ConnectionConfig, "createdAt" | "timeoutMs"> & {
@@ -54,7 +88,9 @@ async function collect(
 		flags.name ??
 		(await input({
 			message: "Connection name",
-			default: prev?.name,
+			default:
+				prev?.name ??
+				flags.database?.toLowerCase().replace(/[^a-z0-9_-]/g, "-"),
 			validate: (v) =>
 				CONNECTION_NAME_PATTERN.test(v) || "lowercase letters, digits, - or _",
 		}));
@@ -115,15 +151,24 @@ export async function addCommand(
 	registry: Registry,
 	flags: AddFlags,
 ): Promise<void> {
-	// Non-interactive password sources, in order: --password-stdin, env.
+	if (flags.url === "-" && flags.passwordStdin) {
+		throw new BridgeError(
+			"INVALID_CONNECTION",
+			"--url - and --password-stdin both read stdin; use one",
+		);
+	}
+	// Password sources, in order: --password-stdin, env, the URL, then a prompt.
+	const fromUrl = await applyUrl(flags);
 	let envPassword: string | undefined;
 	if (flags.passwordStdin)
 		envPassword = (await readStdin()).replace(/\r?\n$/, "");
 	else if (process.env.DEEBEEBRIDGE_PASSWORD)
 		envPassword = process.env.DEEBEEBRIDGE_PASSWORD;
-	const interactive = process.stdin.isTTY && !flags.passwordStdin;
+	envPassword ??= fromUrl.password;
+	const interactive =
+		process.stdin.isTTY && !flags.passwordStdin && flags.url !== "-";
 
-	let answers = await collect(flags, undefined, envPassword);
+	let answers = await collect(fromUrl.flags, undefined, envPassword);
 	for (;;) {
 		const { password, ...rest } = answers;
 		const conn: ConnectionConfig = {
