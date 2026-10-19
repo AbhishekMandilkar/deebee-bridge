@@ -28,7 +28,7 @@ Every tool takes `connection`, the saved name. `schema` is the MySQL database / 
 | `describe_table` | `connection`, `table`, `schema?` | `{columns: [{name, type, nullable, default?}], primaryKey, indexes: [{name, columns, unique}]}` |
 | `run_query` | `connection`, `sql`, `params?` | `{columns, rows, rowCount, truncated, durationMs}` |
 
-Deliberately **not** separate tools: `list_databases`, `sample_rows` and `explain_query` from `SPEC.md`.
+Deliberately **not** separate tools: `list_databases`, `sample_rows` and `explain_query` (the original brief had them).
 An agent can do each with `run_query` (`SHOW DATABASES`, `SELECT … LIMIT 5`, `EXPLAIN SELECT …`), and every
 tool definition costs context on every session.
 
@@ -37,23 +37,24 @@ tool definition costs context on every session.
 - Results are positional: `columns` once, then `rows` as arrays. No per-row keys, no pretty-printing.
 - Rows are capped at the connection's `rowLimit` (default 500). The database stops producing rows at `limit + 1`,
   so `truncated: true` means more existed.
-- The whole response is capped at 64 KB (`MAX_RESPONSE_CHARS` in `core/src/serialize.ts`), and a single cell at 2000 characters.
+- The whole response is capped at 64 KB (`MAX_RESPONSE_CHARS` in `core/src/serialize.ts`), and a single cell at 2000 characters; oversized JSON documents and Buffers become clipped text with a `…(+N chars)` marker. A row that alone exceeds the budget is dropped and `truncated` is set.
 - `bigint` → string, `Date` → ISO-8601, `Buffer` → `base64:…`.
 
 ### Errors
 
 Failures return `isError: true` with text `CODE: message`, for example
 `QUERY_REJECTED_READONLY: "prod" is read-only; only SELECT/WITH/SHOW/DESCRIBE/EXPLAIN are allowed (delete statement).`
-Codes are listed in `core/src/errors.ts`. Messages are redacted.
+Codes are listed in `core/src/errors.ts`. Messages are redacted: `createDriver` wraps every driver so a password never appears in an error, whatever the database library wrote.
 
 ## Read-only enforcement
 
 For `mode: "read-only"` connections there are two independent layers:
 
 1. **Classifier** (`core/src/safety.ts`, `node-sql-parser`): exactly one statement, and it must be a
-   `SELECT`/`WITH … SELECT`/`SHOW`/`DESCRIBE`, or `EXPLAIN` of a `SELECT`. Locking reads and `SELECT … INTO` are rejected.
+   `SELECT`/`WITH … SELECT`/`SHOW`/`DESCRIBE`, or `EXPLAIN` of a `SELECT`. Locking reads and `SELECT … INTO` are rejected
+   wherever they appear (UNION branches, subqueries), as are MySQL `/*! … */` comments, which MySQL executes.
    Anything the parser cannot read is rejected (`QUERY_PARSE_FAILED`): it fails closed.
-2. **Database**: Postgres runs each query inside `BEGIN READ ONLY`; MySQL sessions run `SET SESSION TRANSACTION READ ONLY`.
+2. **Database**: Postgres runs each query inside `BEGIN READ ONLY`; MySQL sessions run `SET SESSION TRANSACTION READ ONLY`, awaited before the first query (a failure aborts the query).
    Integration tests send a `DELETE` straight to the driver to prove the database refuses it.
 
 Neither layer replaces a database user with read-only grants. Functions with side effects outside the
