@@ -1,4 +1,4 @@
-import { type Bridge, BridgeError, redact } from "@deebeebridge/core";
+import { type Bridge, toBridgeError } from "@deebeebridge/core";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
@@ -17,13 +17,7 @@ const ok = (value: unknown): Result => ({
 const fail = (err: unknown): Result => ({
 	isError: true,
 	content: [
-		{
-			type: "text",
-			text:
-				err instanceof BridgeError
-					? String(err)
-					: `QUERY_ERROR: ${redact(err instanceof Error ? err.message : String(err))}`,
-		},
+		{ type: "text", text: String(toBridgeError(err, [], "QUERY_ERROR")) },
 	],
 });
 
