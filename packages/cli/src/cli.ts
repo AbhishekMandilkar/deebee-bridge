@@ -2,6 +2,7 @@ import { BridgeError, createRegistry, redact } from "@deebeebridge/core";
 import { Command } from "commander";
 import { type AddFlags, addCommand } from "./commands/add.js";
 import { listCommand } from "./commands/list.js";
+import { mcpCommand } from "./commands/mcp.js";
 import { testCommand } from "./commands/test.js";
 
 const program = new Command()
@@ -40,6 +41,13 @@ program
 	.command("test <name>")
 	.description("Connect and report latency")
 	.action((name: string) => testCommand(registry, name));
+
+program
+	.command("mcp")
+	.description(
+		"Start the MCP server on stdio (used by Claude Code, Cursor, ...)",
+	)
+	.action(() => mcpCommand(registry));
 
 program.parseAsync().catch((err: unknown) => {
 	// ExitPromptError = user pressed Ctrl+C in a prompt.
