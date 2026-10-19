@@ -1,0 +1,26 @@
+{
+	"name": "@deebeebridge/core",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"check-types": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@clickhouse/client": "^1.24.1",
+		"@napi-rs/keyring": "^2.1.2",
+		"mysql2": "^3.24.6",
+		"node-sql-parser": "^5.4.0",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@deebeebridge/config": "workspace:*",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "^5.0.5"
+	}
+}

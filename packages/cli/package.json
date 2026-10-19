@@ -1,0 +1,39 @@
+{
+	"name": "deebeebridge",
+	"version": "0.0.0",
+	"description": "CLI and MCP server that exposes MySQL and ClickHouse connections to AI agents by name, without sharing credentials.",
+	"type": "module",
+	"bin": {
+		"deebeebridge": "dist/cli.js"
+	},
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=20"
+	},
+	"scripts": {
+		"build": "tsup",
+		"dev": "tsup --watch",
+		"check-types": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@clickhouse/client": "^1.24.1",
+		"@inquirer/prompts": "^8.7.3",
+		"@modelcontextprotocol/sdk": "^1.32.1",
+		"@napi-rs/keyring": "^2.1.2",
+		"commander": "^15.0.0",
+		"mysql2": "^3.24.6",
+		"node-sql-parser": "^5.4.0",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@deebeebridge/config": "workspace:*",
+		"@deebeebridge/core": "workspace:*",
+		"@types/node": "catalog:",
+		"tsup": "^9.0.0",
+		"typescript": "catalog:",
+		"vitest": "^5.0.5"
+	}
+}
