@@ -64,6 +64,30 @@ describe.each(dialects)("assertReadOnly (%s)", (d) => {
 	});
 });
 
+describe("assertReadOnly (hidden clauses)", () => {
+	const mysql = (sql: string) => () => assertReadOnly(sql, "mysql", "c");
+	it("checks every UNION branch, subquery and CTE, not just the first statement", () => {
+		expect(
+			mysql("select * from a union select * from b into outfile '/tmp/x'"),
+		).toThrow(/SELECT INTO/);
+		expect(mysql("select * from a union select * from b for update")).toThrow(
+			/locking read/,
+		);
+		expect(mysql("select * from (select 1 for update) t")).toThrow(
+			/locking read/,
+		);
+		expect(
+			mysql("select * from t where x in (select y from z for update)"),
+		).toThrow(/locking read/);
+	});
+	it("rejects version-conditional comments that MySQL executes", () => {
+		expect(mysql("select * from t /*!50000 into outfile '/tmp/x' */")).toThrow(
+			/version-conditional/,
+		);
+		expect(mysql("select /*+ MAX_EXECUTION_TIME(1) */ 1")).not.toThrow();
+	});
+});
+
 describe("assertReadOnly (mysql only)", () => {
 	const ok = (sql: string) => assertReadOnly(sql, "mysql", "c");
 	it("allows SHOW and DESCRIBE", () => {

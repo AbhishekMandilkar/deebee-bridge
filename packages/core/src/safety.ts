@@ -1,4 +1,5 @@
 import sqlParser from "node-sql-parser";
+import type { SqlDialect } from "./drivers/types.js";
 import { BridgeError } from "./errors.js";
 
 const parser = new sqlParser.Parser();
@@ -11,8 +12,6 @@ const EXPLAIN_PREFIX =
 
 interface Ast {
 	type?: string;
-	locking_read?: unknown;
-	into?: { position?: unknown; expr?: unknown };
 }
 
 function reject(name: string, why: string): never {
@@ -28,7 +27,7 @@ function reject(name: string, why: string): never {
  */
 export function assertReadOnly(
 	sql: string,
-	dialect: "mysql" | "postgresql",
+	dialect: SqlDialect,
 	name: string,
 ): void {
 	let explained = false;
@@ -36,6 +35,11 @@ export function assertReadOnly(
 	if (EXPLAIN_PREFIX.test(sql)) {
 		explained = true;
 		body = sql.replace(EXPLAIN_PREFIX, "");
+	}
+
+	// MySQL runs `/*!50000 ... */` as code, but the parser reads it as a comment.
+	if (dialect === "mysql" && /\/\*!|\/\*M!/.test(sql)) {
+		reject(name, "version-conditional comment");
 	}
 
 	let ast: Ast | Ast[];
@@ -57,6 +61,23 @@ export function assertReadOnly(
 	} else if (!["select", "show", "desc"].includes(stmt.type ?? "")) {
 		reject(name, `${stmt.type ?? "unknown"} statement`);
 	}
-	if (stmt.locking_read) reject(name, "locking read");
-	if (stmt.into?.position || stmt.into?.expr) reject(name, "SELECT INTO");
+	const found = findForbidden(stmt);
+	if (found) reject(name, found);
+}
+
+/**
+ * Locking reads and SELECT INTO can sit on any node: the right side of a UNION
+ * (`_next`), a subquery, a CTE. Walk the whole tree rather than just the top statement.
+ */
+function findForbidden(node: unknown): string | undefined {
+	if (!node || typeof node !== "object") return undefined;
+	const n = node as Record<string, unknown>;
+	if (n.locking_read) return "locking read";
+	const into = n.into as { position?: unknown; expr?: unknown } | undefined;
+	if (into?.position || into?.expr) return "SELECT INTO";
+	for (const child of Object.values(n)) {
+		const hit = findForbidden(child);
+		if (hit) return hit;
+	}
+	return undefined;
 }

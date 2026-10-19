@@ -1,5 +1,7 @@
 import type { ConnectionConfig } from "../connection.js";
 
+export type SqlDialect = "mysql" | "postgresql";
+
 /** A result set as column names + positional rows (compact; no per-row keys). */
 export interface Table {
 	columns: string[];
@@ -44,7 +46,7 @@ export interface DriverDefinition {
 	label: string;
 	defaultPort: number;
 	/** SQL dialect name for the read-only classifier (node-sql-parser). */
-	dialect: "mysql" | "postgresql";
+	dialect: SqlDialect;
 	/** Build a driver. Must not touch the network until a method is called. */
 	create(config: ConnectionConfig, password: string): Driver;
 }
