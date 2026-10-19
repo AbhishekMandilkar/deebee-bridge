@@ -31,15 +31,20 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO agent_ro;
 - **SSL**: `ssl: true` enables TLS with certificate verification (`pg` default). Servers with a
   private CA or self-signed certificate will fail with `CONNECTION_FAILED` until custom CA support is added.
 - **Read-only mode**: connections with `mode: "read-only"` start every session with
-  `default_transaction_read_only=on`, so the database rejects writes even if a statement slips past
-  any client-side check. (A session can still `SET` it back; a read-only grant on the user is the real guarantee.)
+  `default_transaction_read_only=on` and run each query in an explicit `BEGIN READ ONLY` transaction, which a
+  query cannot switch off. The database rejects writes even if a statement slips past the classifier.
+  A read-only grant on the user is still the real guarantee.
 - **Errors**: SQLSTATE `28000`/`28P01` → `AUTH_FAILED`; every other connect/ping failure
   (refused, DNS, timeout, unknown database) → `CONNECTION_FAILED`. Passwords are redacted.
 
-## Current scope
+## Queries and introspection
 
-Only `ping` and `close` are implemented. Listing databases/tables, describing tables and running
-queries arrive with the MCP tools and extend the `Driver` interface.
+- `query` uses a `pg-cursor` and reads at most `limit + 1` rows, so large results are never fully fetched.
+  On read-only connections it runs inside `BEGIN READ ONLY … ROLLBACK`.
+- `listTables`/`describeTable` read `pg_class`, `information_schema` and `pg_index`; table and schema names are bind
+  parameters. `schema` defaults to `current_schema()`. Row counts are the planner's estimate (`null` until the table is analyzed).
+- Timeouts (`statement_timeout`) map to `TIMEOUT`; other SQL errors map to `QUERY_ERROR`.
+- Bind values with `$1`, `$2`, … ([mcp.md](mcp.md) for the tools that use this).
 
 ## Testing against a real server
 

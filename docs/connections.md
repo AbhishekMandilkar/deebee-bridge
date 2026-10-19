@@ -34,6 +34,7 @@ Set `DEEBEEBRIDGE_HOME` to use a different directory (used by tests).
 | `deebeebridge add` | Prompts for each field (flags skip prompts), pings the database, then saves. On failure: retry / edit / cancel. |
 | `deebeebridge list [--json]` | Shows saved connections. No secrets. |
 | `deebeebridge test <name>` | Connects with the stored password and reports latency. |
+| `deebeebridge mcp` | Starts the stdio [MCP server](mcp.md). |
 
 Non-interactive `add`: pass `--type --name --host --port --database --user --ssl|--no-ssl --mode --row-limit`
 and supply the password with `--password-stdin` or the `DEEBEEBRIDGE_PASSWORD` environment variable.
@@ -74,6 +75,7 @@ A source is one `DriverDefinition` (`drivers/types.ts`):
 export const mysqlDriver: DriverDefinition = {
   label: "MySQL",          // shown in the `add` type picker
   defaultPort: 3306,       // default offered by `add`
+  dialect: "mysql",        // grammar for the read-only classifier
   create(config, password) { /* return a Driver; connect lazily */ },
 };
 ```
@@ -86,13 +88,16 @@ Steps:
 3. Add the client library to **both** `packages/core/package.json` and `packages/cli/package.json`
    (the CLI bundle inlines `core`, so the CLI's copy is what npm users install).
 4. Add a `docs/<source>.md` and a service in `docker-compose.yml`; add a `DEEBEEBRIDGE_TEST_<SOURCE>` entry in
-   `packages/core/test/drivers.integration.test.ts` (it runs ping, wrong-password and unreachable-host checks).
+   `packages/core/test/drivers.integration.test.ts` (ping, wrong password, unreachable host) and in
+   `bridge.integration.test.ts` (introspection, row cap, read-only rejection by classifier and by the database).
 
 Nothing else changes: the type picker, default port, schema validation, `add`, `list`, `test` and the
 registry all read from `drivers`.
 
-When MCP tools land, they will add methods (`listTables`, `describeTable`, `query`, ...) to the
-`Driver` interface; each source then implements them in its own file.
+A `Driver` also implements `listTables`, `describeTable` and `query` (see `drivers/types.ts`) for the
+[MCP server](mcp.md). `query` must stop reading at `limit + 1` rows, and the driver, not the caller, applies
+database-level read-only settings from `config.mode`. `DriverDefinition.dialect` tells the read-only
+classifier which SQL grammar to use.
 
 ## Testing
 

@@ -20,14 +20,18 @@ GRANT SELECT ON app.* TO 'agent_ro'@'%';
 ## What the driver does
 
 - **Lazy pool**: nothing connects until a method is called; one `mysql2` pool (max 4), closed by `close()`.
-- **Timeouts**: `connectTimeout` is the connection's `timeoutMs` (default 15000). Per-query `MAX_EXECUTION_TIME` arrives with `query`.
+- **Timeouts**: `connectTimeout` and the session `MAX_EXECUTION_TIME` are the connection's `timeoutMs` (default 15000). `MAX_EXECUTION_TIME` only applies to `SELECT`, which is all a read-only connection can run.
 - **SSL**: `ssl: true` enables TLS with certificate verification; private-CA servers fail with `CONNECTION_FAILED`.
-- **Read-only mode**: each new pooled connection runs `SET SESSION TRANSACTION READ ONLY`. Not yet exercised by a test, because the `Driver` interface has no query method; it gets tested when `query` lands.
+- **Read-only mode**: each new pooled connection runs `SET SESSION TRANSACTION READ ONLY`; an integration test sends a `DELETE` past the classifier and expects the database to refuse it.
 - **Errors**: `ER_ACCESS_DENIED_ERROR`/`ER_DBACCESS_DENIED_ERROR` → `AUTH_FAILED`; every other connect/ping failure → `CONNECTION_FAILED`. Passwords are redacted.
 
-## Current scope
+## Queries and introspection
 
-Only `ping` and `close`.
+- `query` collects row events and stops at `limit + 1`; when the limit is hit the connection is dropped so the server stops producing rows.
+  Statements without a result set (read-write connections) return `{columns: ["affectedRows"], rows: [[n]]}`.
+- `listTables`/`describeTable` read `information_schema` (`TABLES`, `COLUMNS`, `STATISTICS`); names are bind parameters.
+  `schema` defaults to `DATABASE()`. Row counts are InnoDB estimates.
+- Bind values with `?` ([mcp.md](mcp.md) for the tools that use this).
 
 ## Testing against a real server
 

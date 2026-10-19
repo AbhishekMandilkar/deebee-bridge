@@ -88,4 +88,4 @@ deebeebridge/
 ## deebeebridge
 
 CLI + local MCP server that gives AI agents access to your databases by connection name, never by credentials.
-See [`SPEC.md`](SPEC.md) and [`docs/`](docs/connections.md): connections first, then [PostgreSQL](docs/postgres.md) and [MySQL](docs/mysql.md).
+See [`SPEC.md`](SPEC.md) and [`docs/`](docs/connections.md): connections first, then [PostgreSQL](docs/postgres.md), [MySQL](docs/mysql.md) and the [MCP server](docs/mcp.md).
