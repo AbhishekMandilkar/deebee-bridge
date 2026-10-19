@@ -1,91 +1,126 @@
 # deebeebridge
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines Next.js, and more.
+Give AI coding agents access to your databases **without giving them your credentials**.
 
-## Features
+You register a connection once. The password goes into your OS keychain. Claude Code, Cursor or any
+MCP client then reaches the database by **connection name** through a local server, and can list
+tables, read schemas and run queries. Writes are blocked unless you allow them.
 
-- **TypeScript** - For type safety and improved developer experience
-- **Next.js** - Full-stack React framework
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Turborepo** - Optimized monorepo build system
-- **Biome** - Linting and formatting
+Supports **PostgreSQL** and **MySQL**. ClickHouse is planned.
 
-## Getting Started
+## Install
 
-First, install the dependencies:
+Not published to npm yet; run it from source (Node 20+ and [Bun](https://bun.sh)):
 
 ```bash
+git clone <this repo> && cd deebeebridge
 bun install
+cd packages/cli && bun run build
+ln -s "$PWD/dist/cli.js" ~/.local/bin/deebeebridge   # any directory on your PATH
+deebeebridge --help
 ```
 
-Then, run the development server:
+## Use it
+
+**1. Save a connection** (interactive; the password prompt is masked):
 
 ```bash
-bun run dev
+deebeebridge add
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
-
-## UI Customization
-
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
-
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json` and `apps/web/components.json`
-
-### Add more shared components
-
-Run this from the project root to add more primitives to the shared UI package:
+Or in a script, with flags and the password on stdin:
 
 ```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
+echo -n "$DB_PASSWORD" | deebeebridge add --type postgres --name app-db \
+  --host db.example.com --port 5432 --database app --user readonly \
+  --ssl --mode read-only --row-limit 500 --password-stdin
 ```
 
-Import shared components like this:
+`add` tests the connection before saving. New connections default to `read-only`.
+Prefer a database user that only has `SELECT` grants ([examples](docs/postgres.md)).
 
-```tsx
-import { Button } from "@deebeebridge/ui/components/button";
+**2. Check it:**
+
+```bash
+deebeebridge list          # table of saved connections (add --json for scripts)
+deebeebridge test app-db   # connects and prints latency
 ```
 
-### Add app-specific blocks
+**3. Connect your agent:**
 
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from `apps/web`.
-
-## Environment Configuration
-
-Each app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `bun run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
-
-Import the generated `ENV` accessor in application code. Shared database and auth packages receive configuration or initialized clients from the application. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
-
-Bun's automatic env loading is disabled in `bunfig.toml`; the framework integration or server bootstrap loads Varlock. Node deployments must include Varlock and its dependencies alongside the app schema.
-
-Run standalone Node/Bun tools that use Varlock from the owning app directory so they load that app's schema and env files. `env:generate` only generates TypeScript files; it does not initialize environment values in a subsequent command.
-
-## Git Hooks and Formatting
-
-- Run checks: `bun run check`
-
-## Project Structure
-
-```
-deebeebridge/
-├── apps/
-│   ├── web/         # Frontend application (Next.js)
-├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
+```bash
+claude mcp add deebeebridge -- deebeebridge mcp     # Claude Code
 ```
 
-## Available Scripts
+Cursor, in `~/.cursor/mcp.json`:
 
-- `bun run dev`: Start all applications in development mode
-- `bun run build`: Build all applications
-- `bun run dev:web`: Start only the web application
-- `bun run check-types`: Check TypeScript types across all apps
-- `bun run check`: Run Biome formatting and linting
+```json
+{ "mcpServers": { "deebeebridge": { "command": "deebeebridge", "args": ["mcp"] } } }
+```
 
-## deebeebridge
+Then ask the agent something like *"Using the app-db connection, which tables have the most rows?"*
+It never sees a host, user or password, only the name.
 
-CLI + local MCP server that gives AI agents access to your databases by connection name, never by credentials.
-See [`SPEC.md`](SPEC.md) and [`docs/`](docs/connections.md): connections first, then [PostgreSQL](docs/postgres.md), [MySQL](docs/mysql.md) and the [MCP server](docs/mcp.md).
+## What the agent gets
+
+Four small tools (about 400 tokens of definitions), each taking the connection name:
+
+| Tool | Returns |
+|---|---|
+| `list_connections` | name, type, database, mode of each saved connection |
+| `list_tables` | tables and views with approximate row counts |
+| `describe_table` | columns, types, nullability, primary key, indexes |
+| `run_query` | `columns` and `rows`, plus `rowCount`, `truncated`, `durationMs` |
+
+Results stay small on purpose: rows are capped at the connection's row limit (default 500), each cell
+at 2000 characters, each response at 64 KB, and `truncated` tells the agent when it was cut.
+Details: [docs/mcp.md](docs/mcp.md).
+
+## How it works
+
+```
+Agent ──MCP over stdio──► deebeebridge mcp ──► driver (pg / mysql2) ──► your database
+                               │
+                               ├─ ~/.deebeebridge/connections.json   host, port, user, mode… (no passwords)
+                               └─ OS keychain                        passwords
+```
+
+- **Credentials:** only the connection *name* crosses the MCP boundary. Passwords live in the OS keychain
+  and are masked from every error message and log line.
+- **Read-only connections** are enforced twice. A SQL parser allows only one `SELECT`, `WITH … SELECT`,
+  `SHOW`, `DESCRIBE` or `EXPLAIN` statement and rejects anything it cannot parse. The database then
+  refuses writes itself (Postgres `READ ONLY` transaction, MySQL read-only session).
+- **Read-write connections** accept any statement; use them deliberately.
+- **stdout** of `deebeebridge mcp` carries MCP protocol only.
+
+Deeper: [connections](docs/connections.md) · [PostgreSQL](docs/postgres.md) · [MySQL](docs/mysql.md) · [MCP server](docs/mcp.md) · [design and roadmap](SPEC.md).
+
+## Configuration
+
+| Setting | Default |
+|---|---|
+| Config directory | `~/.deebeebridge/` (override with `DEEBEEBRIDGE_HOME`) |
+| Keychain service | `deebeebridge`, one entry per connection name |
+| Password for non-interactive `add` | `--password-stdin` or `DEEBEEBRIDGE_PASSWORD` |
+
+## Status
+
+Built: `add`, `list`, `test`, `mcp`, Postgres and MySQL. Planned: `edit`, `remove`, `install claude|cursor`,
+audit log, ClickHouse. Known gaps are listed at the bottom of [SPEC.md](SPEC.md).
+
+## Develop
+
+Bun workspaces + Turborepo: `packages/core` (all logic), `packages/cli` (the `deebeebridge` binary),
+`apps/web` ([landing site](apps/web/README.md)), `packages/ui`, `packages/config`.
+
+```bash
+bun run check-types && bun run build     # whole repo
+cd packages/core && bunx vitest run      # unit tests
+docker compose up -d                     # Postgres + MySQL for the live tests
+DEEBEEBRIDGE_TEST_PG=localhost:54329:postgres:admin:secretpw \
+DEEBEEBRIDGE_TEST_MYSQL=127.0.0.1:33069:app:root:secretpw bunx vitest run
+```
+
+Run Biome on the files you touch (`bunx biome check --write <paths>`), not `bun run check`: the web
+scaffold is 2-space indented and the root command would reformat about 46 of its files.
+To add a database, see [Adding a new database source](docs/connections.md#adding-a-new-database-source).
