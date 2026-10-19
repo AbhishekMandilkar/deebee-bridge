@@ -1,9 +1,11 @@
 import type { ConnectionConfig } from "../connection.js";
 import { BridgeError, toBridgeError } from "../errors.js";
+import { mysqlDriver as mysql } from "./mysql.js";
 import { postgres } from "./postgres.js";
 import type { Driver, DriverDefinition } from "./types.js";
 
 /** The one place that lists supported database sources. */
+export const drivers = { postgres, mysql } satisfies Record<
 	string,
 	DriverDefinition
 >;
