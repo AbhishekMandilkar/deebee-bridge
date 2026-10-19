@@ -16,7 +16,7 @@
 		"build": "tsup",
 		"dev": "tsup --watch",
 		"check-types": "tsc --noEmit",
-		"test": "vitest run --passWithNoTests"
+		"test": "vitest run"
 	},
 	"dependencies": {
 		"@clickhouse/client": "^1.24.1",
@@ -27,6 +27,7 @@
 		"mysql2": "^3.24.6",
 		"node-sql-parser": "^5.4.0",
 		"pg": "^8.23.1",
+		"pg-cursor": "^2.22.1",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

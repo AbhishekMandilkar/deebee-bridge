@@ -58,6 +58,7 @@
         "mysql2": "^3.24.6",
         "node-sql-parser": "^5.4.0",
         "pg": "^8.23.1",
+        "pg-cursor": "^2.22.1",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -82,12 +83,14 @@
         "mysql2": "^3.24.6",
         "node-sql-parser": "^5.4.0",
         "pg": "^8.23.1",
+        "pg-cursor": "^2.22.1",
         "zod": "catalog:",
       },
       "devDependencies": {
         "@deebeebridge/config": "workspace:*",
         "@types/node": "catalog:",
         "@types/pg": "^8.23.1",
+        "@types/pg-cursor": "^2.7.2",
         "typescript": "catalog:",
         "vitest": "^5.0.5",
       },
@@ -595,6 +598,8 @@
 
     "@types/pg": ["@types/pg@8.23.1", "", { "dependencies": { "@types/node": "*", "pg-protocol": "*", "pg-types": "^2.2.0" } }, "sha512-fKVHpikPdg4GKks3JuLEhvwSyvwzF23hnabPy6DD8ljVbC7+6J5dQzdv4arV6jqq57djnMgs1HKBxX4P8aBI3A=="],
 
+    "@types/pg-cursor": ["@types/pg-cursor@2.7.2", "", { "dependencies": { "@types/node": "*", "@types/pg": "*" } }, "sha512-m3xT8bVFCvx98LuzbvXyuCdT/Hjdd/v8ml4jL4K1QF70Y8clOfCFdgoaEB1FWdcSwcpoFYZTJQaMD9/GQ27efQ=="],
+
     "@types/react": ["@types/react@19.3.0", "", { "dependencies": { "csstype": "^3.2.2" } }, "sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg=="],
 
     "@types/react-dom": ["@types/react-dom@19.3.0", "", { "peerDependencies": { "@types/react": "^19.3.0" } }, "sha512-ZI7bU42mZXXKHn/qNLEw2IrbiINU7X5+vfgdixBHkCNpYWXjKgfQ/P+uyGb5CjOLB9UcnTeg3rylQtV2hym44Q=="],
@@ -1058,6 +1063,8 @@
     "pg-cloudflare": ["pg-cloudflare@1.4.1", "", {}, "sha512-6PQbsFWZcp9EmJEwy5cGQ2La+AMWpP46lgbb8X+U/XsHIUweYDNCpeuKck5RxL2MdVFi7krbbEi5nX4Zh7JhrQ=="],
 
     "pg-connection-string": ["pg-connection-string@2.14.1", "", {}, "sha512-qR3kGNPBLpCNtz0evbKA0Y/MRFXwSSdT+pTJvYp/bXTcReZbvX1kzF0IyTc1QnxqF7AZbOeBhNL8R5mYQZV/MA=="],
+
+    "pg-cursor": ["pg-cursor@2.22.1", "", { "peerDependencies": { "pg": "^8" } }, "sha512-X10ldv3wwBONQkOSwgWEbaEITMGLd92V2Zd+xsFPhDt3nhhU3hpAT08SERBChnIFmomczLax6lKXLJrHPPXfxA=="],
 
     "pg-int8": ["pg-int8@1.0.1", "", {}, "sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw=="],
 

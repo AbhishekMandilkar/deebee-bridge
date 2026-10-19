@@ -16,12 +16,14 @@
 		"mysql2": "^3.24.6",
 		"node-sql-parser": "^5.4.0",
 		"pg": "^8.23.1",
+		"pg-cursor": "^2.22.1",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@deebeebridge/config": "workspace:*",
 		"@types/node": "catalog:",
 		"@types/pg": "^8.23.1",
+		"@types/pg-cursor": "^2.7.2",
 		"typescript": "catalog:",
 		"vitest": "^5.0.5"
 	}
