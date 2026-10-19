@@ -25,6 +25,8 @@ export const mysqlDriver: DriverDefinition = {
 	dialect: "mysql",
 	create(config, password) {
 		let pool: mysql.Pool | undefined;
+		// Connections whose session limits were applied (and confirmed) already.
+		const prepared = new WeakSet<object>();
 		const getPool = () => {
 			if (!pool) {
 				pool = mysql.createPool({
@@ -36,13 +38,6 @@ export const mysqlDriver: DriverDefinition = {
 					ssl: config.ssl ? { rejectUnauthorized: true } : undefined,
 					connectionLimit: 4,
 					connectTimeout: config.timeoutMs,
-				});
-				pool.pool.on("connection", (conn) => {
-					// timeoutMs is a validated integer, safe to inline.
-					conn.query(`SET SESSION MAX_EXECUTION_TIME=${config.timeoutMs}`);
-					// Backstop for read-only connections (see docs/mysql.md).
-					if (config.mode === "read-only")
-						conn.query("SET SESSION TRANSACTION READ ONLY");
 				});
 			}
 			return pool;
@@ -132,8 +127,20 @@ export const mysqlDriver: DriverDefinition = {
 				} catch (err) {
 					throw mapError(err, "CONNECTION_FAILED");
 				}
-				let abandon = false;
+				let discard = false;
 				try {
+					// Awaited, and fatal on failure: a read-only connection must never run
+					// without the database-level backstop (see docs/mysql.md).
+					if (!prepared.has(conn.connection)) {
+						// timeoutMs is a validated integer, safe to inline.
+						await conn.query(
+							`SET SESSION MAX_EXECUTION_TIME=${config.timeoutMs}`,
+						);
+						if (config.mode === "read-only") {
+							await conn.query("SET SESSION TRANSACTION READ ONLY");
+						}
+						prepared.add(conn.connection);
+					}
 					const q = (conn.connection as unknown as CallbackConnection).query({
 						sql,
 						values: params,
@@ -159,7 +166,7 @@ export const mysqlDriver: DriverDefinition = {
 									rows.push(row);
 									if (rows.length > limit) {
 										// The server may still be producing rows: drop the connection.
-										abandon = true;
+										discard = true;
 										resolve({
 											columns,
 											rows: rows.slice(0, limit),
@@ -173,10 +180,10 @@ export const mysqlDriver: DriverDefinition = {
 						},
 					);
 				} catch (err) {
-					abandon = true;
+					discard = true;
 					throw mapError(err, "QUERY_ERROR");
 				} finally {
-					if (abandon) conn.destroy();
+					if (discard) conn.destroy();
 					else conn.release();
 				}
 			},
