@@ -20,6 +20,23 @@ describe("toJsonValue", () => {
 	});
 });
 
+describe("oversized cells", () => {
+	it("clips large JSON documents and Buffers to text with a marker", () => {
+		const big = { a: "z".repeat(MAX_CELL_CHARS * 2) };
+		const json = toJsonValue(big) as string;
+		expect(typeof json).toBe("string");
+		expect(json.length).toBeLessThan(MAX_CELL_CHARS + 40);
+		expect(json).toMatch(/…\(\+\d+ chars\)$/);
+		expect(toJsonValue(Buffer.alloc(MAX_CELL_CHARS * 2))).toMatch(
+			/^base64:.*…\(\+\d+ chars\)$/,
+		);
+	});
+	it("keeps small JSON as structured data", () => {
+		expect(toJsonValue({ a: [1, 2] })).toEqual({ a: [1, 2] });
+		expect(toJsonValue(null)).toBeNull();
+	});
+});
+
 describe("capOutput", () => {
 	it("keeps small results whole", () => {
 		const out = capOutput({ columns: ["a"], rows: [[1], [2]] });
@@ -34,6 +51,11 @@ describe("capOutput", () => {
 		expect(JSON.stringify(out.rows).length).toBeLessThanOrEqual(
 			MAX_RESPONSE_CHARS,
 		);
+	});
+	it("never lets a single huge row exceed the budget", () => {
+		const row = Array.from({ length: 100 }, () => "y".repeat(MAX_CELL_CHARS));
+		const out = capOutput({ columns: ["a"], rows: [row] });
+		expect(out).toMatchObject({ rowCount: 0, truncated: true });
 	});
 	it("propagates an upstream truncation flag", () => {
 		expect(capOutput({ columns: [], rows: [] }, true).truncated).toBe(true);
