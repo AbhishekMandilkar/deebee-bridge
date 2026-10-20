@@ -24,7 +24,8 @@
 	},
 	"type": "module",
 	"bin": {
-		"deebeebridge": "dist/cli.js"
+		"deebeebridge": "dist/cli.js",
+		"dbb": "dist/cli.js"
 	},
 	"files": [
 		"dist"

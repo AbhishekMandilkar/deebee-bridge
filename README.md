@@ -17,8 +17,11 @@ git clone <this repo> && cd deebeebridge
 bun install
 cd packages/cli && bun run build
 ln -s "$PWD/dist/cli.js" ~/.local/bin/deebeebridge   # any directory on your PATH
+ln -s "$PWD/dist/cli.js" ~/.local/bin/dbb            # optional short alias
 deebeebridge --help
 ```
+
+The package installs two identical commands: `deebeebridge` and the short alias `dbb`.
 
 ## Use it
 
