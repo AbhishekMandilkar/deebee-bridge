@@ -1,1 +1,42 @@
 @import "@deebeebridge/ui/globals.css";
+
+/*
+ * Type hierarchy is four grays, strongest to weakest:
+ *   foreground       headlines, commands
+ *   text-secondary   lead paragraphs
+ *   muted-foreground body copy
+ *   text-subtle      labels, captions, line numbers
+ * Every tier clears 4.5:1 on both background and card, in both themes.
+ */
+:root {
+	--text-secondary: oklch(0.35 0 0);
+	--text-subtle: oklch(0.5 0 0);
+	--muted-foreground: oklch(0.45 0 0);
+	--surface: oklch(0.97 0 0);
+}
+
+.dark {
+	--muted-foreground: oklch(0.708 0 0);
+	--text-secondary: oklch(0.82 0 0);
+	--text-subtle: oklch(0.62 0 0);
+	--surface: oklch(0.18 0 0);
+}
+
+@theme inline {
+	--font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+	--font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+	--color-text-secondary: var(--text-secondary);
+	--color-text-subtle: var(--text-subtle);
+	--color-surface: var(--surface);
+}
+
+html {
+	scroll-behavior: smooth;
+	scroll-padding-top: 4rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+}
