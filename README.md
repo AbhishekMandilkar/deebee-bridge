@@ -2,7 +2,7 @@
 
 Give AI coding agents access to your databases **without giving them your credentials**.
 
-You register a connection once. The password goes into your OS keychain. Claude Code, Cursor or any
+You register a connection once. The password is saved in a private file on your machine (`0600`). Claude Code, Cursor or any
 MCP client then reaches the database by **connection name** through a local server, and can list
 tables, read schemas and run queries. Writes are blocked unless you allow them.
 
@@ -101,11 +101,12 @@ Details: [docs/mcp.md](docs/mcp.md).
 Agent ──MCP over stdio──► deebeebridge mcp ──► driver (pg / mysql2) ──► your database
                                │
                                ├─ ~/.deebeebridge/connections.json   host, port, user, mode… (no passwords)
-                               └─ OS keychain                        passwords
+                               └─ ~/.deebeebridge/secrets.json       passwords (plain text, file mode 0600)
 ```
 
-- **Credentials:** only the connection *name* crosses the MCP boundary. Passwords live in the OS keychain
-  and are masked from every error message and log line.
+- **Credentials:** only the connection *name* crosses the MCP boundary. Passwords live in `secrets.json`, readable
+  only by you (like `~/.ssh` keys or `~/.pgpass`), and are masked from every error message and log line.
+  Anyone who can read your home directory can read them; use a database user with read-only grants.
 - **Read-only connections** are enforced twice. A SQL parser allows only one `SELECT`, `WITH … SELECT`,
   `SHOW`, `DESCRIBE` or `EXPLAIN` statement and rejects anything it cannot parse. The database then
   refuses writes itself (Postgres `READ ONLY` transaction, MySQL read-only session).
@@ -119,7 +120,7 @@ Deeper: [connections](docs/connections.md) · [PostgreSQL](docs/postgres.md) · 
 | Setting | Default |
 |---|---|
 | Config directory | `~/.deebeebridge/` (override with `DEEBEEBRIDGE_HOME`) |
-| Keychain service | `deebeebridge`, one entry per connection name |
+| Passwords | `<config directory>/secrets.json`, one entry per connection name |
 | Password for non-interactive `add` | `--password-stdin`, `DEEBEEBRIDGE_PASSWORD`, or inside the `--url` |
 | Connection URL for `add` | `--url <url>`, `--url -` (stdin) or `DEEBEEBRIDGE_URL` |
 

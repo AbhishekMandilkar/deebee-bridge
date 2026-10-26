@@ -9,7 +9,7 @@ A **connection** is a named, saved way to reach one database. You register it on
 | What | Where | Notes |
 |---|---|---|
 | Non-secret settings | `~/.deebeebridge/connections.json` | file `0600`, dir `0700`, written atomically |
-| Password | OS keychain, service `deebeebridge`, account = connection name | never on disk, in logs, or in output |
+| Password | `~/.deebeebridge/secrets.json` (same permissions, plain text), keyed by connection name | never in `connections.json`, logs, or output |
 
 Set `DEEBEEBRIDGE_HOME` to use a different directory (used by tests).
 
@@ -60,18 +60,18 @@ Failures print `CODE: message` on stderr and exit 1. The message is redacted (pa
 cli  (prompts, flags, output)            packages/cli/src/commands/*
  └─ core  Registry                       packages/core/src/registry.ts
       ├─ ConfigStore  connections.json   config.ts
-      ├─ SecretStore  OS keychain        secrets.ts
+      ├─ SecretStore  secrets.json         secrets.ts
       └─ drivers      one per source     drivers/index.ts  ──► drivers/<source>.ts
 ```
 
-- **Registry** is the only thing that touches config and secrets. `add` writes the keychain
-  first, then the config, and removes the keychain entry if the config write fails, so the two
+- **Registry** is the only thing that touches config and secrets. `add` writes the password
+  first, then the config, and removes the password if the config write fails, so the two
   cannot drift apart. `open(name)` returns a ready `Driver`.
 - **ConfigStore / SecretStore** are injected into `createRegistry({ config, secrets })`. Tests use a
   temp directory and `memorySecrets()`; production uses the defaults.
 - **probe(config, password)** connects, pings, disconnects and returns latency. `add` uses it
   before saving; `test` uses it for stored connections. It redacts the password from any error.
-- **cli is thin**: it never reads files or the keychain directly. Anything needing the keychain,
+- **cli is thin**: it never reads files directly. Anything needing the
   filesystem or a database driver belongs in `core`.
 
 ## Adding a new database source

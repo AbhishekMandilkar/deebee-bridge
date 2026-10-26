@@ -5,7 +5,7 @@
 
 ## Goal
 Stop pasting database credentials into AI agents. Users register connections once through an
-interactive CLI. Passwords live in the OS keychain. A local stdio MCP server exposes those
+interactive CLI. Passwords live in a private file (`secrets.json`, `0600`). A local stdio MCP server exposes those
 connections **by name only** to Claude Code, Cursor and other MCP clients, with small outputs so
 agents' context windows stay free.
 
@@ -16,21 +16,21 @@ agents' context windows stay free.
 
 ## Design rules
 - Adding a database source is one `DriverDefinition` file plus one registry line ([connections.md](docs/connections.md)).
-- Needs keychain, filesystem or a database driver → `packages/core`. Argument parsing, prompts, MCP wiring → `packages/cli`. Browser-safe → `apps/web`, `packages/ui`.
-- Never write passwords to disk, logs, stdout or MCP responses. Every driver error is masked in one place (`redactErrors`).
+- Needs the filesystem or a database driver → `packages/core`. Argument parsing, prompts, MCP wiring → `packages/cli`. Browser-safe → `apps/web`, `packages/ui`.
+- Passwords live only in `secrets.json`; never write them to `connections.json`, logs, stdout or MCP responses. Every driver error is masked in one place (`redactErrors`).
 - stdout of `deebeebridge mcp` is MCP protocol only.
 - Tool definitions and results are paid for in every agent session: keep them terse ([mcp.md](docs/mcp.md)).
 
 ## Tech stack
 TypeScript (ESM, Node 20+), Bun workspaces + Turborepo, `commander`, `@inquirer/prompts`,
-`@modelcontextprotocol/sdk`, `@napi-rs/keyring`, `pg` + `pg-cursor`, `mysql2`, `zod`, `node-sql-parser`, `vitest`, `tsup`.
+`@modelcontextprotocol/sdk`, `pg` + `pg-cursor`, `mysql2`, `zod`, `node-sql-parser`, `vitest`, `tsup`.
 The npm package is `deebeebridge` (`packages/cli`); `@deebeebridge/core` is private and bundled into it.
 
 ## Layout
 ```
 packages/core/src
   connection.ts   zod schema, name rule      config.ts    ~/.deebeebridge/connections.json (0600, atomic)
-  secrets.ts      keychain / in-memory       registry.ts  connection CRUD over config + secrets
+  secrets.ts      secrets.json / in-memory       registry.ts  connection CRUD over config + secrets
   drivers/        types.ts, index.ts, postgres.ts, mysql.ts
   safety.ts       read-only classifier       serialize.ts value + size caps
   bridge.ts       what an agent may do with a named connection
@@ -43,7 +43,7 @@ packages/cli/src
 `~/.deebeebridge/connections.json` (override the directory with `DEEBEEBRIDGE_HOME`):
 `name` (`^[a-z0-9][a-z0-9-_]{0,62}$`, unique), `type` (a key of `drivers`), `host`, `port`, `database`, `user`,
 `ssl`, `mode` (`read-only` default | `read-write`), `rowLimit` (500), `timeoutMs` (15000), `createdAt`.
-Password: OS keychain, service `deebeebridge`, account = connection name.
+Password: `~/.deebeebridge/secrets.json` (`0600`, atomic writes), keyed by connection name. Plain text on purpose: no native module to ship, same trust model as `~/.pgpass`.
 
 ## Driver interface (`drivers/types.ts`)
 `ping`, `listTables(schema?)`, `describeTable(table, schema?)`, `query(sql, {params?, limit})`, `close`.
@@ -52,7 +52,7 @@ The driver applies database-level read-only and timeout settings from its own co
 
 ## CLI
 - `add --url <url|->` (or `DEEBEEBRIDGE_URL`) fills every server field from one connection string; flags override it.
-- `add`: prompts for type, name, host, port, database, user, password, SSL, mode, row limit (flags skip prompts; password via `--password-stdin` or `DEEBEEBRIDGE_PASSWORD`). Pings first; on failure offers retry / edit / cancel. Saves keychain first, then config, and undoes the keychain entry if config fails.
+- `add`: prompts for type, name, host, port, database, user, password, SSL, mode, row limit (flags skip prompts; password via `--password-stdin` or `DEEBEEBRIDGE_PASSWORD`). Pings first; on failure offers retry / edit / cancel. Saves the password first, then config, and undoes the password if config fails.
 - `list [--json]`, `test <name>`, `mcp`.
 - Planned: `edit`, `remove`, `install claude|cursor` (`claude mcp add deebeebridge -- deebeebridge mcp`; merge into `~/.cursor/mcp.json` without clobbering other servers).
 
@@ -80,4 +80,4 @@ Live: `docker compose up -d`, then run core tests with `DEEBEEBRIDGE_TEST_PG` / 
 Manual: `npx @modelcontextprotocol/inspector deebeebridge mcp`.
 
 ## Known gaps
-`describe_table` output is not size-capped. `EXPLAIN` of non-SELECT statements and the MySQL `EXPLAIN <table>` synonym are rejected. Postgres `FOR UPDATE` and writable CTEs fail to parse and so surface as `QUERY_PARSE_FAILED`. TLS with a private CA is not supported yet.
+`describe_table` output is not size-capped. `EXPLAIN` of non-SELECT statements and the MySQL `EXPLAIN <table>` synonym are rejected. Postgres `FOR UPDATE` and writable CTEs fail to parse and so surface as `QUERY_PARSE_FAILED`. TLS with a private CA is not supported yet. On Windows the `0600` mode is not enforced, so `secrets.json` relies on the profile directory's permissions.
