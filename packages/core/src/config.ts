@@ -9,6 +9,18 @@ export function defaultHome(): string {
 	return process.env.DEEBEEBRIDGE_HOME ?? join(homedir(), ".deebeebridge");
 }
 
+/** Atomically writes JSON (file 0600, dir 0700): temp file in the same directory, then rename. */
+export async function writePrivateJson(
+	file: string,
+	data: unknown,
+): Promise<void> {
+	await mkdir(dirname(file), { recursive: true, mode: 0o700 });
+	await chmod(dirname(file), 0o700);
+	const tmp = `${file}.${randomBytes(6).toString("hex")}.tmp`;
+	await writeFile(tmp, `${JSON.stringify(data, null, 2)}\n`, { mode: 0o600 });
+	await rename(tmp, file);
+}
+
 /** Reads and atomically writes connections.json (file 0600, dir 0700). Holds no secrets. */
 export function configStore(home = defaultHome()) {
 	const file = join(home, "connections.json");
@@ -40,19 +52,8 @@ export function configStore(home = defaultHome()) {
 			}
 			return parsed.data.connections;
 		},
-		async write(connections: ConnectionConfig[]): Promise<void> {
-			await mkdir(dirname(file), { recursive: true, mode: 0o700 });
-			await chmod(dirname(file), 0o700);
-			const tmp = `${file}.${randomBytes(6).toString("hex")}.tmp`;
-			await writeFile(
-				tmp,
-				`${JSON.stringify({ version: 1, connections }, null, 2)}\n`,
-				{
-					mode: 0o600,
-				},
-			);
-			await rename(tmp, file);
-		},
+		write: (connections: ConnectionConfig[]): Promise<void> =>
+			writePrivateJson(file, { version: 1, connections }),
 	};
 }
 

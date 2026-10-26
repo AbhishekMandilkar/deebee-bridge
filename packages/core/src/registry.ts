@@ -1,9 +1,9 @@
-import { type ConfigStore, configStore } from "./config";
+import { type ConfigStore, configStore, defaultHome } from "./config";
 import { type ConnectionConfig, connectionSchema } from "./connection";
 import { createDriver } from "./drivers/index";
 import type { Driver } from "./drivers/types";
 import { BridgeError } from "./errors";
-import { keychainSecrets, type SecretStore } from "./secrets";
+import { fileSecrets, type SecretStore } from "./secrets";
 
 /**
  * Connection CRUD over config (non-secret) + secrets (password). Callers never
@@ -12,8 +12,9 @@ import { keychainSecrets, type SecretStore } from "./secrets";
 export function createRegistry(
 	deps: { config?: ConfigStore; secrets?: SecretStore } = {},
 ) {
-	const config = deps.config ?? configStore();
-	const secrets = deps.secrets ?? keychainSecrets();
+	const home = defaultHome();
+	const config = deps.config ?? configStore(home);
+	const secrets = deps.secrets ?? fileSecrets(home);
 
 	async function get(name: string): Promise<ConnectionConfig> {
 		const found = (await config.read()).find((c) => c.name === name);
@@ -30,7 +31,7 @@ export function createRegistry(
 		if (secret === null) {
 			throw new BridgeError(
 				"SECRET_MISSING",
-				`no password in the keychain for "${name}"; re-create it with \`deebeebridge edit ${name}\``,
+				`no stored password for "${name}"; add the connection again`,
 			);
 		}
 		return secret;
@@ -56,7 +57,7 @@ export function createRegistry(
 		get,
 		password,
 
-		/** Save password to the keychain, then config; undo the keychain entry if config fails. */
+		/** Save the password, then config; undo the password if config fails. */
 		async add(input: ConnectionConfig, secret: string): Promise<void> {
 			const conn = connectionSchema.parse(input);
 			const existing = await ensureNameFree(conn.name);

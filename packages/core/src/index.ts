@@ -22,4 +22,4 @@ export {
 } from "./errors";
 export { createRegistry, type Registry } from "./registry";
 export { assertReadOnly } from "./safety";
-export { keychainSecrets, memorySecrets, type SecretStore } from "./secrets";
+export { fileSecrets, memorySecrets, type SecretStore } from "./secrets";

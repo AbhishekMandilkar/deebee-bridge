@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, stat } from "node:fs/promises";
+import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -8,6 +8,7 @@ import {
 	configStore,
 	createRegistry,
 	DEFAULTS,
+	fileSecrets,
 	memorySecrets,
 	redact,
 	toBridgeError,
@@ -125,5 +126,46 @@ describe("redact", () => {
 			"hunter2",
 		]);
 		expect(e.toString()).toBe("AUTH_FAILED: bad ***");
+	});
+});
+
+describe("fileSecrets", () => {
+	it("round-trips, overwrites and deletes per account", async () => {
+		const secrets = fileSecrets(home);
+		expect(await secrets.get("a")).toBeNull();
+		await secrets.set("a", "one");
+		await secrets.set("b", "two");
+		await secrets.set("a", "three");
+		expect(await secrets.get("a")).toBe("three");
+		expect(await secrets.get("b")).toBe("two");
+		await secrets.delete("a");
+		expect(await secrets.get("a")).toBeNull();
+		expect(await secrets.get("b")).toBe("two");
+	});
+
+	it("writes a private file, separate from connections.json", async () => {
+		const reg = createRegistry({
+			config: configStore(home),
+			secrets: fileSecrets(home),
+		});
+		await reg.add(conn(), "hunter2");
+
+		const file = join(home, "secrets.json");
+		expect((await stat(file)).mode & 0o777).toBe(0o600);
+		expect(await readFile(file, "utf8")).toContain("hunter2");
+		expect(
+			await readFile(join(home, "connections.json"), "utf8"),
+		).not.toContain("hunter2");
+		expect(await reg.password("local-pg")).toBe("hunter2");
+		await reg.remove("local-pg");
+		expect(await readFile(file, "utf8")).not.toContain("hunter2");
+	});
+
+	it("refuses a corrupt file instead of dropping the passwords in it", async () => {
+		await writeFile(join(home, "secrets.json"), "not json");
+		await expect(fileSecrets(home).set("a", "x")).rejects.toMatchObject({
+			code: "INVALID_CONNECTION",
+		});
+		expect(await readFile(join(home, "secrets.json"), "utf8")).toBe("not json");
 	});
 });
