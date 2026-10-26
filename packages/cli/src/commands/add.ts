@@ -182,7 +182,7 @@ export async function addCommand(
 			const ms = await probe(conn, password);
 			await registry.add(conn, password);
 			console.log(
-				`Connected in ${ms}ms. Saved "${conn.name}" (password stored in the OS keychain).`,
+				`Connected in ${ms}ms. Saved "${conn.name}" (password stored in secrets.json, mode 0600).`,
 			);
 			return;
 		} catch (err) {
