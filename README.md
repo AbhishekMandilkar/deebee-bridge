@@ -10,18 +10,23 @@ Supports **PostgreSQL** and **MySQL**. ClickHouse is planned.
 
 ## Install
 
-Not published to npm yet; run it from source (Node 20+ and [Bun](https://bun.sh)):
+Requires Node 20+.
 
 ```bash
-git clone <this repo> && cd deebeebridge
-bun install
-cd packages/cli && bun run build
-ln -s "$PWD/dist/cli.js" ~/.local/bin/deebeebridge   # any directory on your PATH
-ln -s "$PWD/dist/cli.js" ~/.local/bin/dbb            # optional short alias
+npm i -g deebeebridge
 deebeebridge --help
 ```
 
-The package installs two identical commands: `deebeebridge` and the short alias `dbb`.
+This installs two identical commands: `deebeebridge` and the short alias `dbb`.
+
+To run from source instead (needs [Bun](https://bun.sh)):
+
+```bash
+git clone https://github.com/AbhishekMandilkar/deebee-bridge.git && cd deebee-bridge
+bun install
+cd packages/cli && bun run build
+ln -s "$PWD/dist/cli.js" ~/.local/bin/deebeebridge   # any directory on your PATH
+```
 
 ## Use it
 
