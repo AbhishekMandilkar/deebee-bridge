@@ -1,9 +1,21 @@
-import { BridgeError, createRegistry, redact } from "@deebeebridge/core";
+import {
+	BridgeError,
+	createRegistry,
+	redact,
+	serverStore,
+} from "@deebeebridge/core";
 import { Command } from "commander";
 import pkg from "../package.json";
 import { type AddFlags, addCommand } from "./commands/add";
 import { listCommand } from "./commands/list";
-import { mcpCommand } from "./commands/mcp";
+import {
+	mcpCommand,
+	mcpLogsCommand,
+	mcpServeCommand,
+	mcpStartCommand,
+	mcpStatusCommand,
+	mcpStopCommand,
+} from "./commands/mcp";
 import { testCommand } from "./commands/test";
 
 const program = new Command()
@@ -13,6 +25,7 @@ const program = new Command()
 		"Register database connections once; let AI agents use them by name.",
 	);
 const registry = createRegistry();
+const server = serverStore();
 
 program
 	.command("add")
@@ -48,12 +61,42 @@ program
 	.description("Connect and report latency")
 	.action((name: string) => testCommand(registry, name));
 
-program
+const mcp = program
 	.command("mcp")
 	.description(
-		"Start the MCP server on stdio (used by Claude Code, Cursor, ...)",
+		"MCP server: stdio when run bare (Claude Code, Cursor launch it), or a background HTTP server via start/stop",
 	)
 	.action(() => mcpCommand(registry));
+
+mcp
+	.command("start")
+	.description(
+		"Start the MCP server in the background and print how to connect",
+	)
+	.option("--port <n>", "listen on this port instead of the defaults")
+	.action((flags) => mcpStartCommand(server, flags));
+
+mcp
+	.command("stop")
+	.description("Stop the background MCP server")
+	.action(() => mcpStopCommand(server));
+
+mcp
+	.command("status")
+	.description("Show whether the background MCP server is running")
+	.action(() => mcpStatusCommand(server));
+
+mcp
+	.command("logs")
+	.description("Show the end of the background server's log")
+	.option("-n, --lines <n>", "number of lines", "50")
+	.action((flags) => mcpLogsCommand(server, flags));
+
+mcp
+	.command("serve")
+	.description("Run the HTTP MCP server in the foreground (what `start` runs)")
+	.option("--port <n>", "listen on this port instead of the defaults")
+	.action((flags) => mcpServeCommand(registry, server, flags));
 
 program.parseAsync().catch((err: unknown) => {
 	// ExitPromptError = user pressed Ctrl+C in a prompt.
