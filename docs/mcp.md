@@ -16,6 +16,33 @@ Cursor (`~/.cursor/mcp.json`):
 { "mcpServers": { "deebeebridge": { "command": "deebeebridge", "args": ["mcp"] } } }
 ```
 
+## Background HTTP server
+
+`deebeebridge mcp` (stdio) exists only while its client runs. For a server that outlives the terminal:
+
+```bash
+deebeebridge mcp start     # detaches, prints the URL and copy-paste connect commands, exits
+deebeebridge mcp status | logs [-n 50] | stop
+deebeebridge mcp serve     # same server in the foreground (what `start` runs; handy under a process manager)
+```
+
+| | |
+|---|---|
+| Address | `http://127.0.0.1:<port>/mcp`, loopback only |
+| Port | first free of: the last-used port, 43117, 38207, 29417 (`--port <n>` overrides). Clients keep the URL, so it stays stable across restarts |
+| Auth | `Authorization: Bearer <token>`; the token is created on first start and kept in `server.json` (`0600`) with the port and pid |
+| Refused | missing or wrong token (401), any `Origin` header (403, so web pages cannot drive it), a `Host` other than loopback on our port (403, DNS rebinding), bodies over 1 MB |
+| Other paths | `GET /health` answers without a token and reveals nothing but the name |
+| Files | `~/.deebeebridge/server.json`, `server.log` (trimmed past 1 MB on start) |
+
+Claude Code: `claude mcp add --transport http deebeebridge http://127.0.0.1:43117/mcp --header "Authorization: Bearer <token>"`.
+Cursor: `{"mcpServers":{"deebeebridge":{"url":"…/mcp","headers":{"Authorization":"Bearer <token>"}}}}`.
+
+The server is stateless: each request gets a fresh MCP server over the shared connection pool, so restarting loses nothing.
+Tools, limits and read-only rules are identical to stdio. Anyone holding the token can run read-only queries on every
+saved connection, so treat it like a password (`server.json` has the same permissions as `secrets.json`). It does not
+restart after a reboot, and detaching and stopping are only tested on macOS.
+
 ## Tools
 
 Four tools, about 400 tokens of definitions in total (a test fails if the definitions exceed 3000 characters).
@@ -63,7 +90,9 @@ database (Postgres `pg_sleep`, large reads, `LOAD_FILE` for users with `FILE`) a
 ## Architecture
 
 ```
-MCP client ─stdio─► cli/src/mcp/server.ts ─► cli/src/mcp/tools.ts   (schemas, descriptions, error mapping)
+MCP client ─stdio─► cli/src/mcp/server.ts ─┐
+MCP client ─HTTP──► cli/src/mcp/http.ts   ─┴► cli/src/mcp/tools.ts   (schemas, descriptions, error mapping)
+                    (daemon.ts: start/stop/status/logs)
                                                    │
                                                    ▼
                               core/src/bridge.ts   createBridge(registry)
@@ -78,7 +107,7 @@ MCP client ─stdio─► cli/src/mcp/server.ts ─► cli/src/mcp/tools.ts   (s
 ## Testing
 
 ```bash
-cd packages/cli  && bunx vitest run     # in-memory MCP client: tool list, size budget, error mapping, no secrets
+cd packages/cli  && bunx vitest run     # in-memory + HTTP MCP client: tool list, size budget, error mapping, token/Origin/Host guards, port fallback
 cd packages/core && DEEBEEBRIDGE_TEST_PG=… DEEBEEBRIDGE_TEST_MYSQL=… bunx vitest run   # live: every tool path on both databases
 npx @modelcontextprotocol/inspector deebeebridge mcp   # manual
 ```

@@ -77,6 +77,21 @@ Cursor, in `~/.cursor/mcp.json`:
 { "mcpServers": { "deebeebridge": { "command": "deebeebridge", "args": ["mcp"] } } }
 ```
 
+**Optional: one background server instead.** `deebeebridge mcp` talks over stdio and lives only as long as
+its client. Run `deebeebridge mcp start` for a server that keeps running after you close the terminal;
+it prints the URL and the exact command for your client:
+
+```bash
+deebeebridge mcp start     # MCP server running at http://127.0.0.1:43117/mcp (pid 4821) + connect commands
+deebeebridge mcp status    # running? where?
+deebeebridge mcp logs      # tail of ~/.deebeebridge/server.log
+deebeebridge mcp stop
+```
+
+It listens on `127.0.0.1` only, on an uncommon port (43117, then 38207 or 29417 if taken; the last one used
+is tried first so the URL stays the same). Every request needs the bearer token that `start` prints (kept
+in `~/.deebeebridge/server.json`, mode `0600`); browser requests are refused. It does not restart after a reboot.
+
 Then ask the agent something like *"Using the app-db connection, which tables have the most rows?"*
 It never sees a host, user or password, only the name.
 

@@ -5,12 +5,12 @@
 
 ## Goal
 Stop pasting database credentials into AI agents. Users register connections once through an
-interactive CLI. Passwords live in a private file (`secrets.json`, `0600`). A local stdio MCP server exposes those
+interactive CLI. Passwords live in a private file (`secrets.json`, `0600`). A local MCP server (stdio, or a background HTTP server) exposes those
 connections **by name only** to Claude Code, Cursor and other MCP clients, with small outputs so
 agents' context windows stay free.
 
 ## Scope
-**Built:** PostgreSQL and MySQL; `add`, `list`, `test`, `mcp`; four MCP tools; read-only enforcement.
+**Built:** PostgreSQL and MySQL; `add`, `list`, `test`, `mcp` (stdio) and `mcp start|stop|status|logs|serve` (background HTTP); four MCP tools; read-only enforcement.
 **Planned:** `edit`, `remove`, `install <claude|cursor>`, audit log, ClickHouse driver.
 **Out of scope:** GUI/desktop app (core is kept protocol-free so one could reuse it), HTTP transport, cloud sync.
 
@@ -19,6 +19,7 @@ agents' context windows stay free.
 - Needs the filesystem or a database driver → `packages/core`. Argument parsing, prompts, MCP wiring → `packages/cli`. Browser-safe → `apps/web`, `packages/ui`.
 - Passwords live only in `secrets.json`; never write them to `connections.json`, logs, stdout or MCP responses. Every driver error is masked in one place (`redactErrors`).
 - stdout of `deebeebridge mcp` is MCP protocol only.
+- The HTTP server binds loopback only, requires a bearer token, and refuses any `Origin` header and foreign `Host` ([mcp.md](docs/mcp.md#background-http-server)).
 - Tool definitions and results are paid for in every agent session: keep them terse ([mcp.md](docs/mcp.md)).
 
 ## Tech stack
@@ -31,12 +32,13 @@ The npm package is `deebeebridge` (`packages/cli`); `@deebeebridge/core` is priv
 packages/core/src
   connection.ts   zod schema, name rule      config.ts    ~/.deebeebridge/connections.json (0600, atomic)
   secrets.ts      secrets.json / in-memory       registry.ts  connection CRUD over config + secrets
+  server-state.ts server.json (token, port, pid) for the HTTP server
   drivers/        types.ts, index.ts, postgres.ts, mysql.ts
   safety.ts       read-only classifier       serialize.ts value + size caps
   bridge.ts       what an agent may do with a named connection
   errors.ts       typed codes + redaction
 packages/cli/src
-  cli.ts, commands/{add,list,test,mcp}.ts, mcp/{server,tools}.ts
+  cli.ts, commands/{add,list,test,mcp}.ts, mcp/{server,http,daemon,tools}.ts
 ```
 
 ## Data model
@@ -53,7 +55,7 @@ The driver applies database-level read-only and timeout settings from its own co
 ## CLI
 - `add --url <url|->` (or `DEEBEEBRIDGE_URL`) fills every server field from one connection string; flags override it.
 - `add`: prompts for type, name, host, port, database, user, password, SSL, mode, row limit (flags skip prompts; password via `--password-stdin` or `DEEBEEBRIDGE_PASSWORD`). Pings first; on failure offers retry / edit / cancel. Saves the password first, then config, and undoes the password if config fails.
-- `list [--json]`, `test <name>`, `mcp`.
+- `list [--json]`, `test <name>`, `mcp` (stdio), `mcp start|stop|status|logs|serve` (detached HTTP server, uncommon port with fallbacks, bearer token in `server.json`).
 - Planned: `edit`, `remove`, `install claude|cursor` (`claude mcp add deebeebridge -- deebeebridge mcp`; merge into `~/.cursor/mcp.json` without clobbering other servers).
 
 ## MCP tools
