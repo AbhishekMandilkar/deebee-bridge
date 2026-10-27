@@ -45,19 +45,30 @@ restart after a reboot, and detaching and stopping are only tested on macOS.
 
 ## Tools
 
-Four tools, about 400 tokens of definitions in total (a test fails if the definitions exceed 3000 characters).
-Every tool takes `connection`, the saved name. `schema` is the MySQL database / Postgres schema and defaults to the connection's own.
+Five tools, about 600 tokens of definitions in total (a test fails if the definitions exceed 3000 characters).
+Every tool takes `connection`, the saved name. A connection reaches every database its login can open: `database` (optional) picks one, and defaults to the connection's own. `schema` is the Postgres schema (MySQL has none; its databases are what `database` selects).
 
 | Tool | Input | Result |
 |---|---|---|
-| `list_connections` | none | `[{name, type, database, mode}]` |
-| `list_tables` | `connection`, `schema?` | `{columns: [name, type, rows], rows}`; `rows` is an approximate count |
-| `describe_table` | `connection`, `table`, `schema?` | `{columns: [{name, type, nullable, default?}], primaryKey, indexes: [{name, columns, unique}]}` |
-| `run_query` | `connection`, `sql`, `params?` | `{columns, rows, rowCount, truncated, durationMs}` |
+| `list_connections` | none | `[{name, type, database?, mode}]` |
+| `list_databases` | `connection` | `[name]`, system schemas left out |
+| `list_tables` | `connection`, `schema?`, `database?` | `{columns: [name, type, rows], rows}`; `rows` is an approximate count |
+| `describe_table` | `connection`, `table`, `schema?`, `database?` | `{columns: [{name, type, nullable, default?}], primaryKey, indexes: [{name, columns, unique}]}` |
+| `run_query` | `connection`, `sql`, `params?`, `database?` | `{columns, rows, rowCount, truncated, durationMs}` |
 
-Deliberately **not** separate tools: `list_databases`, `sample_rows` and `explain_query` (the original brief had them).
-An agent can do each with `run_query` (`SHOW DATABASES`, `SELECT … LIMIT 5`, `EXPLAIN SELECT …`), and every
-tool definition costs context on every session.
+Deliberately **not** separate tools: `sample_rows` and `explain_query` (the original brief had them).
+An agent can do each with `run_query` (`SELECT … LIMIT 5`, `EXPLAIN SELECT …`), and every tool definition costs
+context on every session. `list_databases` earned a tool because `SHOW DATABASES` and `pg_database` differ per
+source, and because a tool is how an agent learns a connection spans several databases.
+
+### Several databases on one connection
+
+`database` runs the call on another database of the same server with the same login and the same read-only rules
+(the bridge keeps one driver per connection and database). Postgres cannot join across databases, so use one query per
+database there. MySQL can also name another database inside a query (`FROM cora.CANVAS c JOIN common.USER u …`).
+The login must be allowed to open the other databases; otherwise the agent gets the database's own error.
+A connection saved without a default database (`add` accepts an empty one, or a URL with none) asks the agent to call
+`list_databases` and pass `database`. On Postgres, leaving it out means the database named after the user.
 
 ### Keeping output small
 

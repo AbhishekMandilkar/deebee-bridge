@@ -1,6 +1,6 @@
 # Connections
 
-A **connection** is a named, saved way to reach one database. You register it once with
+A **connection** is a named, saved way to reach a database server (and optionally a default database on it). You register it once with
 `deebeebridge add`; afterwards everything (CLI, and later the MCP server) refers to it by
 **name only**. Credentials never leave your machine and never reach an AI agent.
 
@@ -104,7 +104,7 @@ Steps:
 Nothing else changes: the type picker, default port, schema validation, `add`, `list`, `test` and the
 registry all read from `drivers`.
 
-A `Driver` also implements `listTables`, `describeTable` and `query` (see `drivers/types.ts`) for the
+A `Driver` also implements `listDatabases`, `listTables`, `describeTable` and `query` (see `drivers/types.ts`) for the
 [MCP server](mcp.md). `query` must stop reading at `limit + 1` rows, and the driver, not the caller, applies
 database-level read-only settings from `config.mode`. `DriverDefinition.dialect` tells the read-only
 classifier which SQL grammar to use.

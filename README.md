@@ -106,11 +106,12 @@ Put per-project hints (default connection, key tables) in a `.dbb.md` at the pro
 
 ## What the agent gets
 
-Four small tools (about 400 tokens of definitions), each taking the connection name:
+Five small tools (about 600 tokens of definitions), each taking the connection name. `list_tables`, `describe_table` and `run_query` also take an optional `database`, so one connection reaches every database on its server:
 
 | Tool | Returns |
 |---|---|
-| `list_connections` | name, type, database, mode of each saved connection |
+| `list_connections` | name, type, default database, mode of each saved connection |
+| `list_databases` | the databases on the connection's server |
 | `list_tables` | tables and views with approximate row counts |
 | `describe_table` | columns, types, nullability, primary key, indexes |
 | `run_query` | `columns` and `rows`, plus `rowCount`, `truncated`, `durationMs` |

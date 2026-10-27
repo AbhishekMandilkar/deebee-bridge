@@ -42,6 +42,8 @@ which the skill reads first. Commit it so your team's agents share it. Plain Mar
 - Tables:
   - `users` (`id`, `email`, `last_login_at`): "last logged in user" = newest `last_login_at`
   - `orders` (`id`, `user_id`, `status`, `created_at`): "recent orders" = newest by `created_at`
+- Users live in a different database: `common.USER` (`id`, `full_name`, `email`); resolve `createdBy` with
+  `JOIN common.USER u ON u.id = c.createdBy`.
 - Ignore the `audit_*` tables.
 ```
 

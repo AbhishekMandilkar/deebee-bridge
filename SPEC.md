@@ -10,7 +10,7 @@ connections **by name only** to Claude Code, Cursor and other MCP clients, with 
 agents' context windows stay free.
 
 ## Scope
-**Built:** PostgreSQL and MySQL; `add`, `list`, `test`, `mcp` (stdio) and `mcp start|stop|status|logs|serve` (background HTTP); `skill install` (global `/dbb` skill for Claude Code, Cursor, Codex); four MCP tools; read-only enforcement.
+**Built:** PostgreSQL and MySQL; `add`, `list`, `test`, `mcp` (stdio) and `mcp start|stop|status|logs|serve` (background HTTP); `skill install` (global `/dbb` skill for Claude Code, Cursor, Codex); five MCP tools; read-only enforcement.
 **Planned:** `edit`, `remove`, `install <claude|cursor>`, audit log, ClickHouse driver.
 **Out of scope:** GUI/desktop app (core is kept protocol-free so one could reuse it), HTTP transport, cloud sync.
 
@@ -43,12 +43,12 @@ packages/cli/src
 
 ## Data model
 `~/.deebeebridge/connections.json` (override the directory with `DEEBEEBRIDGE_HOME`):
-`name` (`^[a-z0-9][a-z0-9-_]{0,62}$`, unique), `type` (a key of `drivers`), `host`, `port`, `database`, `user`,
+`name` (`^[a-z0-9][a-z0-9-_]{0,62}$`, unique), `type` (a key of `drivers`), `host`, `port`, `database` (optional default), `user`,
 `ssl`, `mode` (`read-only` default | `read-write`), `rowLimit` (500), `timeoutMs` (15000), `createdAt`.
 Password: `~/.deebeebridge/secrets.json` (`0600`, atomic writes), keyed by connection name. Plain text on purpose: no native module to ship, same trust model as `~/.pgpass`.
 
 ## Driver interface (`drivers/types.ts`)
-`ping`, `listTables(schema?)`, `describeTable(table, schema?)`, `query(sql, {params?, limit})`, `close`.
+`ping`, `listDatabases`, `listTables(schema?)`, `describeTable(table, schema?)`, `query(sql, {params?, limit})`, `close`.
 Results are positional (`{columns: string[], rows: unknown[][]}`). `query` reads at most `limit + 1` rows.
 The driver applies database-level read-only and timeout settings from its own config.
 
@@ -60,9 +60,10 @@ The driver applies database-level read-only and timeout settings from its own co
 - Planned: `edit`, `remove`, `install claude|cursor` (`claude mcp add deebeebridge -- deebeebridge mcp`; merge into `~/.cursor/mcp.json` without clobbering other servers).
 
 ## MCP tools
-Four tools, every one takes `connection` (a name; no tool accepts credentials):
-`list_connections`, `list_tables(schema?)`, `describe_table(table, schema?)`, `run_query(sql, params?)`.
-`list_databases`, `sample_rows` and `explain_query` were dropped on purpose: `run_query` covers them and each tool costs context.
+Five tools, every one takes `connection` (a name; no tool accepts credentials):
+`list_connections`, `list_databases`, `list_tables(schema?, database?)`, `describe_table(table, schema?, database?)`, `run_query(sql, params?, database?)`.
+`sample_rows` and `explain_query` were dropped on purpose: `run_query` covers them and each tool costs context. `list_databases` was dropped at first and came back: `SHOW DATABASES` and `pg_database` differ per source, and agents only look beyond a connection's default database when a tool tells them it holds several.
+`database` (optional) on `list_tables`, `describe_table` and `run_query` runs the call on another database of the same server (one driver per connection and database); `database` is optional in the connection too.
 Output is compact JSON. Rows are capped at the connection's `rowLimit`, cells at 2000 characters, responses at 64 KB, each with `truncated` set.
 
 ## Safety
