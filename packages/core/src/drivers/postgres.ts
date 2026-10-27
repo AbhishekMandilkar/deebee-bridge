@@ -15,6 +15,17 @@ function mapError(err: unknown, fallback: ErrorCode): BridgeError {
 	return new BridgeError(fallback, message);
 }
 
+/**
+ * `date` and `timestamp` carry no zone: return their text as stored instead of a Date shifted by
+ * this machine's offset (which could even change the day).
+ */
+const types = {
+	getTypeParser: (oid: number, format?: "text" | "binary") =>
+		oid === 1082 || oid === 1114
+			? (value: string) => value
+			: pg.types.getTypeParser(oid, format as "text"),
+} as unknown as pg.CustomTypesConfig;
+
 export const postgres: DriverDefinition = {
 	label: "PostgreSQL",
 	defaultPort: 5432,
@@ -32,6 +43,7 @@ export const postgres: DriverDefinition = {
 				password,
 				ssl: config.ssl,
 				max: 4,
+				types,
 				connectionTimeoutMillis: config.timeoutMs,
 				statement_timeout: config.timeoutMs,
 				// Backstop for read-only connections (see docs/postgres.md).
@@ -129,7 +141,7 @@ export const postgres: DriverDefinition = {
 					// An explicit READ ONLY transaction cannot be switched off from inside a query.
 					if (readOnly) await client.query("BEGIN READ ONLY");
 					const cursor = client.query(
-						new Cursor(sql, params, { rowMode: "array" }),
+						new Cursor(sql, params, { rowMode: "array", types }),
 					);
 					const { rows, columns } = await new Promise<Table>(
 						(resolve, reject) =>

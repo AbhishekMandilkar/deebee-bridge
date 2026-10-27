@@ -16,11 +16,16 @@ const targets = {
 	postgres: {
 		spec: process.env.DEEBEEBRIDGE_TEST_PG,
 		ph: (n: number) => `$${n}`,
+		datetime: "TIMESTAMP '2026-10-27 18:30:00'",
 	},
-	mysql: { spec: process.env.DEEBEEBRIDGE_TEST_MYSQL, ph: () => "?" },
+	mysql: {
+		spec: process.env.DEEBEEBRIDGE_TEST_MYSQL,
+		ph: () => "?",
+		datetime: "CAST('2026-10-27 18:30:00' AS DATETIME)",
+	},
 } as const;
 
-for (const [type, { spec, ph }] of Object.entries(targets)) {
+for (const [type, { spec, ph, datetime }] of Object.entries(targets)) {
 	describe.skipIf(!spec)(`bridge on ${type} (live)`, () => {
 		const [host = "", port = "", database = "", user = "", password = ""] =
 			spec?.split(":") ?? [];
@@ -129,6 +134,14 @@ for (const [type, { spec, ph }] of Object.entries(targets)) {
 				truncated: true,
 				rows: [[1], [2]],
 			});
+		});
+
+		it("returns zone-less dates and datetimes as stored, whatever this machine's offset", async () => {
+			const r = await ro.runQuery(
+				"ro",
+				`SELECT ${datetime} AS dt, CAST('2026-10-27' AS DATE) AS d`,
+			);
+			expect(r.rows).toEqual([["2026-10-27 18:30:00", "2026-10-27"]]);
 		});
 
 		it("rejects writes on a read-only connection (classifier)", async () => {

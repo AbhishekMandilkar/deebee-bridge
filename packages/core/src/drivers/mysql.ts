@@ -39,6 +39,8 @@ export const mysqlDriver: DriverDefinition = {
 					ssl: config.ssl ? { rejectUnauthorized: true } : undefined,
 					connectionLimit: 4,
 					connectTimeout: config.timeoutMs,
+					// DATETIME has no zone; return it as stored instead of a Date shifted by this machine's offset.
+					dateStrings: true,
 				});
 			}
 			return pool;
