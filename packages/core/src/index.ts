@@ -29,3 +29,10 @@ export {
 	type ServerStore,
 	serverStore,
 } from "./server-state";
+export {
+	type InstalledSkill,
+	installSkill,
+	SKILL_NAME,
+	SKILL_TARGETS,
+	type SkillTarget,
+} from "./skill-install";
