@@ -54,7 +54,7 @@ async function applyUrl(
 			type: u.type,
 			host: u.host,
 			port: String(u.port ?? def.defaultPort),
-			database: u.database,
+			database: u.database ?? "", // empty = deliberately none; skips the prompt
 			user: u.user,
 			ssl: u.ssl,
 			...Object.fromEntries(
@@ -107,9 +107,15 @@ async function collect(
 					validate: (v) => Number.isInteger(Number(v)) || "must be a number",
 				}),
 			);
+	// Optional: agents can pick a database per call (list_databases). Empty = none.
 	const database =
-		flags.database ??
-		(await input({ message: "Database", default: prev?.database }));
+		(
+			flags.database ??
+			(await input({
+				message: "Default database (optional)",
+				default: prev?.database,
+			}))
+		).trim() || undefined;
 	const user =
 		flags.user ?? (await input({ message: "User", default: prev?.user }));
 	const secret =

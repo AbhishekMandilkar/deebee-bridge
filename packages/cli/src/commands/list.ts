@@ -18,7 +18,7 @@ export async function listCommand(
 					c.name,
 					c.type,
 					`${c.host}:${c.port}`,
-					c.database,
+					c.database ?? "-",
 					c.user,
 					c.mode,
 				]),

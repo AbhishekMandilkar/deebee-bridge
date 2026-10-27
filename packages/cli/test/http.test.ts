@@ -124,12 +124,13 @@ describe("http MCP", () => {
 		return client;
 	};
 
-	it("lists the four tools and runs them like stdio does", async () => {
+	it("lists the five tools and runs them like stdio does", async () => {
 		const client = await connect();
 		const { tools } = await client.listTools();
 		expect(tools.map((t) => t.name).sort()).toEqual([
 			"describe_table",
 			"list_connections",
+			"list_databases",
 			"list_tables",
 			"run_query",
 		]);

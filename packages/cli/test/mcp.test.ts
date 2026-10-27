@@ -51,11 +51,12 @@ const text = (r: unknown) =>
 	(r as { content: { text: string }[] }).content[0]?.text ?? "";
 
 describe("tool definitions", () => {
-	it("exposes four tools", async () => {
+	it("exposes five tools", async () => {
 		const { tools } = await client.listTools();
 		expect(tools.map((t) => t.name).sort()).toEqual([
 			"describe_table",
 			"list_connections",
+			"list_databases",
 			"list_tables",
 			"run_query",
 		]);
@@ -98,6 +99,25 @@ describe("tool calls", () => {
 		});
 		expect(write.isError).toBe(true);
 		expect(text(write)).toMatch(/^QUERY_REJECTED_READONLY: "pg" is read-only/);
+	});
+
+	it("list_databases and the database argument reach the driver and fail typed when unreachable", async () => {
+		for (const call of [
+			{ name: "list_databases", arguments: { connection: "pg" } },
+			{
+				name: "list_tables",
+				arguments: { connection: "pg", database: "other" },
+			},
+			{
+				name: "run_query",
+				arguments: { connection: "pg", sql: "select 1", database: "other" },
+			},
+		]) {
+			const r = await client.callTool(call);
+			expect(r.isError).toBe(true);
+			expect(text(r)).toMatch(/^CONNECTION_FAILED: /);
+			expect(text(r)).not.toContain("s3cret-pw");
+		}
 	});
 
 	it("never echoes the stored password in errors", async () => {
