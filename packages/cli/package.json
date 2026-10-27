@@ -1,6 +1,6 @@
 {
 	"name": "deebeebridge",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "CLI and MCP server that exposes database connections to AI agents by name, without sharing credentials.",
 	"license": "MIT",
 	"keywords": [
