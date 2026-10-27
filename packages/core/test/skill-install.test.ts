@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { installSkill, SKILL_TARGETS } from "../src/index";
+import { installSkill, missingSkillTargets, SKILL_TARGETS } from "../src/index";
 
 let home: string;
 beforeEach(async () => {
@@ -61,5 +61,19 @@ describe("installSkill", () => {
 
 	it("knows the three tools", () => {
 		expect(Object.keys(SKILL_TARGETS)).toEqual(["claude", "cursor", "codex"]);
+	});
+});
+
+describe("missingSkillTargets", () => {
+	it("lists detected tools without the skill, and nothing once installed", async () => {
+		expect(missingSkillTargets(home)).toEqual([]);
+		await mkdir(join(home, ".claude"));
+		await mkdir(join(home, ".codex"));
+		expect(missingSkillTargets(home)).toEqual(["claude", "codex"]);
+
+		await installSkill("# skill", { home, only: ["claude"] });
+		expect(missingSkillTargets(home)).toEqual(["codex"]);
+		await installSkill("# skill", { home });
+		expect(missingSkillTargets(home)).toEqual([]);
 	});
 });

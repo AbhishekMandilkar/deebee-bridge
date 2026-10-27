@@ -17,6 +17,7 @@ import {
 	select,
 } from "@inquirer/prompts";
 import { readStdin } from "../io";
+import { skillTip } from "../skill-tip";
 
 export interface AddFlags {
 	type?: string;
@@ -184,6 +185,7 @@ export async function addCommand(
 			console.log(
 				`Connected in ${ms}ms. Saved "${conn.name}" (password stored in secrets.json, mode 0600).`,
 			);
+			skillTip();
 			return;
 		} catch (err) {
 			const e = toBridgeError(err, [password]);

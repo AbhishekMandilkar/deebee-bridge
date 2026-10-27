@@ -14,6 +14,7 @@ import {
 	type ServerState,
 	type ServerStore,
 } from "@deebeebridge/core";
+import { skillTip } from "../skill-tip";
 import {
 	createHttpServer,
 	DEFAULT_PORTS,
@@ -155,6 +156,7 @@ export async function start(
 			console.log(
 				"\nStop it with `deebeebridge mcp stop`; logs: `deebeebridge mcp logs`.",
 			);
+			skillTip();
 			return;
 		}
 	}

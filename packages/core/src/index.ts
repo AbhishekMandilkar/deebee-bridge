@@ -32,6 +32,7 @@ export {
 export {
 	type InstalledSkill,
 	installSkill,
+	missingSkillTargets,
 	SKILL_NAME,
 	SKILL_TARGETS,
 	type SkillTarget,

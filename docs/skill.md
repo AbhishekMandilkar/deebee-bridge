@@ -27,6 +27,7 @@ deebeebridge skill install claude       # or name them: claude, cursor, codex
 
 It always writes to your home directory, never into a project, and replaces an earlier copy, so run it
 again after upgrading deebeebridge. Open sessions need a restart to see it.
+After `add` and `mcp start`, an interactive terminal shows a one-line tip to run `skill install`; it disappears once every tool found has the skill, and it never prints in scripts or pipes.
 Which tools are "found": their config directory exists (`~/.claude`, `~/.cursor`, `~/.codex`).
 The skill is manual-only (`disable-model-invocation`), so it adds nothing to your agent's context until you type `/dbb`.
 

@@ -52,6 +52,17 @@ export interface InstalledSkill {
 	invoke: string;
 }
 
+/** Detected tools that do not have the skill yet (empty when none are detected or all have it). */
+export function missingSkillTargets(home = homedir()): SkillTarget[] {
+	return (Object.keys(SKILL_TARGETS) as SkillTarget[]).filter(
+		(n) =>
+			existsSync(join(home, SKILL_TARGETS[n].detect)) &&
+			!existsSync(
+				join(home, SKILL_TARGETS[n].skillsDir, SKILL_NAME, "SKILL.md"),
+			),
+	);
+}
+
 /**
  * Write the skill into each tool's user-level (global) skills directory, overwriting any
  * earlier copy. With no `only`, installs for every tool whose config directory exists.
