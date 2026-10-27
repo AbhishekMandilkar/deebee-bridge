@@ -16,6 +16,7 @@ import {
 	mcpStatusCommand,
 	mcpStopCommand,
 } from "./commands/mcp";
+import { skillInstallCommand } from "./commands/skill";
 import { testCommand } from "./commands/test";
 
 const program = new Command()
@@ -97,6 +98,15 @@ mcp
 	.description("Run the HTTP MCP server in the foreground (what `start` runs)")
 	.option("--port <n>", "listen on this port instead of the defaults")
 	.action((flags) => mcpServeCommand(registry, server, flags));
+
+program
+	.command("skill")
+	.description("Install the /dbb skill into your coding agents (global)")
+	.command("install [targets...]")
+	.description(
+		"Install into claude, cursor and/or codex; with no targets, every one found on this machine",
+	)
+	.action((targets: string[]) => skillInstallCommand(targets));
 
 program.parseAsync().catch((err: unknown) => {
 	// ExitPromptError = user pressed Ctrl+C in a prompt.
