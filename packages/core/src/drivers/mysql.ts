@@ -1,6 +1,6 @@
 import type { Connection as CallbackConnection } from "mysql2";
 import mysql from "mysql2/promise";
-import { BridgeError, type ErrorCode } from "../errors";
+import { BridgeError, type ErrorCode, NETWORK_ERROR_CODES } from "../errors";
 import type { DriverDefinition, Table, TableSchema } from "./types";
 
 const ACCESS_DENIED = new Set([
@@ -16,6 +16,8 @@ function mapError(err: unknown, fallback: ErrorCode): BridgeError {
 		return new BridgeError("AUTH_FAILED", message);
 	if (e.code && TIMED_OUT.has(e.code))
 		return new BridgeError("TIMEOUT", message);
+	if (e.code && NETWORK_ERROR_CODES.has(e.code))
+		return new BridgeError("CONNECTION_FAILED", message);
 	return new BridgeError(fallback, message);
 }
 
@@ -61,6 +63,16 @@ export const mysqlDriver: DriverDefinition = {
 			}
 		}
 
+		/** Without a default database, unqualified catalog lookups would silently return nothing. */
+		const requireDatabase = (schema: string | undefined) => {
+			if (!schema && !config.database) {
+				throw new BridgeError(
+					"QUERY_ERROR",
+					"no database selected; call list_databases, then pass `database`",
+				);
+			}
+		};
+
 		return {
 			async ping() {
 				try {
@@ -70,7 +82,18 @@ export const mysqlDriver: DriverDefinition = {
 				}
 			},
 
+			async listDatabases() {
+				const rows = await catalog(
+					`SELECT SCHEMA_NAME FROM information_schema.SCHEMATA
+					  WHERE SCHEMA_NAME NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')
+					  ORDER BY 1`,
+					[],
+				);
+				return rows.map(([name]) => name as string);
+			},
+
 			async listTables(schema) {
+				requireDatabase(schema);
 				const rows = await catalog(
 					`SELECT TABLE_NAME, IF(TABLE_TYPE = 'BASE TABLE', 'table', 'view'), TABLE_ROWS
 					   FROM information_schema.TABLES
@@ -81,6 +104,7 @@ export const mysqlDriver: DriverDefinition = {
 			},
 
 			async describeTable(table, schema): Promise<TableSchema> {
+				requireDatabase(schema);
 				const cols = await catalog(
 					`SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE = 'YES', COLUMN_DEFAULT
 					   FROM information_schema.COLUMNS

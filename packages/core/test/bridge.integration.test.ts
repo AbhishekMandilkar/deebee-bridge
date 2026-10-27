@@ -17,15 +17,24 @@ const targets = {
 		spec: process.env.DEEBEEBRIDGE_TEST_PG,
 		ph: (n: number) => `$${n}`,
 		datetime: "TIMESTAMP '2026-10-27 18:30:00'",
+		currentDb: "SELECT current_database()",
+		other: "template1", // exists on every server and accepts connections
+		noDefaultDb: false, // Postgres falls back to a database named after the user
 	},
 	mysql: {
 		spec: process.env.DEEBEEBRIDGE_TEST_MYSQL,
 		ph: () => "?",
 		datetime: "CAST('2026-10-27 18:30:00' AS DATETIME)",
+		currentDb: "SELECT DATABASE()",
+		other: "performance_schema", // exists on every server
+		noDefaultDb: true,
 	},
 } as const;
 
-for (const [type, { spec, ph, datetime }] of Object.entries(targets)) {
+for (const [
+	type,
+	{ spec, ph, datetime, currentDb, other, noDefaultDb },
+] of Object.entries(targets)) {
 	describe.skipIf(!spec)(`bridge on ${type} (live)`, () => {
 		const [host = "", port = "", database = "", user = "", password = ""] =
 			spec?.split(":") ?? [];
@@ -143,6 +152,49 @@ for (const [type, { spec, ph, datetime }] of Object.entries(targets)) {
 			);
 			expect(r.rows).toEqual([["2026-10-27 18:30:00", "2026-10-27"]]);
 		});
+
+		it("lists databases without system schemas, and includes this one", async () => {
+			const dbs = await ro.listDatabases("ro");
+			expect(dbs).toContain(database);
+			expect(dbs).not.toContain("information_schema");
+			expect(dbs).not.toContain("mysql");
+		});
+
+		it("runs against another database of the same server when `database` is given", async () => {
+			const home = (await ro.runQuery("ro", currentDb)).rows[0]?.[0];
+			expect(home).toBe(database);
+			const elsewhere = await ro.runQuery("ro", currentDb, undefined, other);
+			expect(elsewhere.rows[0]?.[0]).toBe(other);
+			// back on the default, and the other database's driver did not replace it
+			expect((await ro.runQuery("ro", currentDb)).rows[0]?.[0]).toBe(database);
+			const tables = await ro.listTables("ro", undefined, other);
+			expect(tables.columns).toEqual(["name", "type", "rows"]);
+		});
+
+		it.skipIf(!noDefaultDb)(
+			"works with no default database: catalog calls ask for one, `database` supplies it",
+			async () => {
+				const home = await mkdtemp(join(tmpdir(), "dbb-nodb-"));
+				const registry = createRegistry({
+					config: configStore(home),
+					secrets: memorySecrets(),
+				});
+				await registry.add(
+					{ ...conn("bare", "read-only", 5), database: undefined },
+					password,
+				);
+				const bare = createBridge(registry);
+				expect(await bare.listDatabases("bare")).toContain(database);
+				await expect(bare.listTables("bare")).rejects.toMatchObject({
+					code: "QUERY_ERROR",
+					message: expect.stringContaining("list_databases"),
+				});
+				expect(
+					(await bare.listTables("bare", undefined, database)).columns,
+				).toEqual(["name", "type", "rows"]);
+				await bare.close();
+			},
+		);
 
 		it("rejects writes on a read-only connection (classifier)", async () => {
 			await expect(

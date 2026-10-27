@@ -26,6 +26,8 @@ export interface TableSchema {
  */
 export interface Driver {
 	ping(): Promise<void>;
+	/** Databases on this server the user can open (system schemas left out). */
+	listDatabases(): Promise<string[]>;
 	/** Tables and views of `schema` (default: the connection's own). Columns: name, type, rows (approx). */
 	listTables(schema?: string): Promise<Table>;
 	describeTable(table: string, schema?: string): Promise<TableSchema>;

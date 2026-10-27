@@ -27,6 +27,16 @@ export class BridgeError extends Error {
 	}
 }
 
+/** Node socket errors that mean the server could not be reached, whichever call hit them. */
+export const NETWORK_ERROR_CODES: ReadonlySet<string> = new Set([
+	"ECONNREFUSED",
+	"ENOTFOUND",
+	"EHOSTUNREACH",
+	"ENETUNREACH",
+	"ECONNRESET",
+	"ETIMEDOUT",
+]);
+
 /** Strip secrets and credentialed URLs from text that may reach a user, log or MCP client. */
 export function redact(text: string, secrets: readonly string[] = []): string {
 	let out = text.replace(

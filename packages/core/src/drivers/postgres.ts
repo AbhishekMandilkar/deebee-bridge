@@ -1,6 +1,6 @@
 import pg from "pg";
 import Cursor from "pg-cursor";
-import { BridgeError, type ErrorCode } from "../errors";
+import { BridgeError, type ErrorCode, NETWORK_ERROR_CODES } from "../errors";
 import type { DriverDefinition, Table, TableSchema } from "./types";
 
 const AUTH_SQLSTATES = new Set(["28000", "28P01"]);
@@ -12,6 +12,8 @@ function mapError(err: unknown, fallback: ErrorCode): BridgeError {
 	if (e.code && AUTH_SQLSTATES.has(e.code))
 		return new BridgeError("AUTH_FAILED", message);
 	if (e.code === QUERY_CANCELED) return new BridgeError("TIMEOUT", message);
+	if (e.code && NETWORK_ERROR_CODES.has(e.code))
+		return new BridgeError("CONNECTION_FAILED", message);
 	return new BridgeError(fallback, message);
 }
 
@@ -72,6 +74,16 @@ export const postgres: DriverDefinition = {
 				} catch (err) {
 					throw mapError(err, "CONNECTION_FAILED");
 				}
+			},
+
+			async listDatabases() {
+				const rows = await catalog(
+					`SELECT datname FROM pg_database
+					  WHERE NOT datistemplate AND has_database_privilege(datname, 'CONNECT')
+					  ORDER BY 1`,
+					[],
+				);
+				return rows.map(([name]) => name as string);
 			},
 
 			async listTables(schema) {

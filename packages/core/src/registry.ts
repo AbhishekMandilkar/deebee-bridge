@@ -82,11 +82,13 @@ export function createRegistry(
 			await secrets.delete(name).catch(() => {});
 		},
 
-		/** A ready-to-use driver for a stored connection. Caller closes it. */
+		/** A ready-to-use driver for a stored connection, on `database` instead of the stored default if given. Caller closes it. */
 		async open(
 			name: string,
+			database?: string,
 		): Promise<{ config: ConnectionConfig; driver: Driver }> {
-			const conn = await get(name);
+			const stored = await get(name);
+			const conn = database ? { ...stored, database } : stored;
 			return { config: conn, driver: createDriver(conn, await password(name)) };
 		},
 	};

@@ -39,6 +39,7 @@ export function redactErrors(driver: Driver, password: string): Driver {
 		};
 	return {
 		ping: guard(() => driver.ping(), "CONNECTION_FAILED"),
+		listDatabases: guard(() => driver.listDatabases(), "QUERY_ERROR"),
 		listTables: guard((s) => driver.listTables(s), "QUERY_ERROR"),
 		describeTable: guard((t, s) => driver.describeTable(t, s), "QUERY_ERROR"),
 		query: guard((sql, opts) => driver.query(sql, opts), "QUERY_ERROR"),
