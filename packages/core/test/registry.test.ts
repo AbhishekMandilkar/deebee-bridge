@@ -10,7 +10,9 @@ import {
 	DEFAULTS,
 	fileSecrets,
 	memorySecrets,
+	newToken,
 	redact,
+	serverStore,
 	toBridgeError,
 } from "../src/index";
 
@@ -167,5 +169,24 @@ describe("fileSecrets", () => {
 			code: "INVALID_CONNECTION",
 		});
 		expect(await readFile(join(home, "secrets.json"), "utf8")).toBe("not json");
+	});
+});
+
+describe("serverStore", () => {
+	it("round-trips state privately and ignores a corrupt file", async () => {
+		const store = serverStore(home);
+		expect(await store.read()).toBeNull();
+		const token = newToken();
+		expect(token.length).toBeGreaterThanOrEqual(32);
+		await store.write({ token, port: 43117, pid: 42 });
+		expect(await store.read()).toEqual({
+			version: 1,
+			token,
+			port: 43117,
+			pid: 42,
+		});
+		expect((await stat(store.file)).mode & 0o777).toBe(0o600);
+		await writeFile(store.file, "not json");
+		expect(await store.read()).toBeNull();
 	});
 });

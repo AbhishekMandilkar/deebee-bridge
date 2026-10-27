@@ -23,3 +23,9 @@ export {
 export { createRegistry, type Registry } from "./registry";
 export { assertReadOnly } from "./safety";
 export { fileSecrets, memorySecrets, type SecretStore } from "./secrets";
+export {
+	newToken,
+	type ServerState,
+	type ServerStore,
+	serverStore,
+} from "./server-state";
