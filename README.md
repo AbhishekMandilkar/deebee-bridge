@@ -95,6 +95,15 @@ in `~/.deebeebridge/server.json`, mode `0600`); browser requests are refused. It
 Then ask the agent something like *"Using the app-db connection, which tables have the most rows?"*
 It never sees a host, user or password, only the name.
 
+**4. Optional: the `/dbb` shortcut.** Install a skill so you can type `/dbb pls check last logged in user`
+instead of spelling out the connection and tables:
+
+```bash
+deebeebridge skill install      # Claude Code, Cursor and Codex, whichever are on this machine (global)
+```
+
+Put per-project hints (default connection, key tables) in a `.dbb.md` at the project root. Details: [skill](docs/skill.md).
+
 ## What the agent gets
 
 Four small tools (about 400 tokens of definitions), each taking the connection name:
@@ -128,7 +137,7 @@ Agent ──MCP over stdio──► deebeebridge mcp ──► driver (pg / mysq
 - **Read-write connections** accept any statement; use them deliberately.
 - **stdout** of `deebeebridge mcp` carries MCP protocol only.
 
-Deeper: [connections](docs/connections.md) · [PostgreSQL](docs/postgres.md) · [MySQL](docs/mysql.md) · [MCP server](docs/mcp.md) · [design and roadmap](SPEC.md).
+Deeper: [connections](docs/connections.md) · [PostgreSQL](docs/postgres.md) · [MySQL](docs/mysql.md) · [MCP server](docs/mcp.md) · [`/dbb` skill](docs/skill.md) · [design and roadmap](SPEC.md).
 
 ## Configuration
 

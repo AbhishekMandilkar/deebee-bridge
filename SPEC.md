@@ -10,7 +10,7 @@ connections **by name only** to Claude Code, Cursor and other MCP clients, with 
 agents' context windows stay free.
 
 ## Scope
-**Built:** PostgreSQL and MySQL; `add`, `list`, `test`, `mcp` (stdio) and `mcp start|stop|status|logs|serve` (background HTTP); four MCP tools; read-only enforcement.
+**Built:** PostgreSQL and MySQL; `add`, `list`, `test`, `mcp` (stdio) and `mcp start|stop|status|logs|serve` (background HTTP); `skill install` (global `/dbb` skill for Claude Code, Cursor, Codex); four MCP tools; read-only enforcement.
 **Planned:** `edit`, `remove`, `install <claude|cursor>`, audit log, ClickHouse driver.
 **Out of scope:** GUI/desktop app (core is kept protocol-free so one could reuse it), HTTP transport, cloud sync.
 
@@ -38,7 +38,7 @@ packages/core/src
   bridge.ts       what an agent may do with a named connection
   errors.ts       typed codes + redaction
 packages/cli/src
-  cli.ts, commands/{add,list,test,mcp}.ts, mcp/{server,http,daemon,tools}.ts
+  cli.ts, commands/{add,list,test,mcp,skill}.ts, mcp/{server,http,daemon,tools}.ts
 ```
 
 ## Data model
@@ -55,6 +55,7 @@ The driver applies database-level read-only and timeout settings from its own co
 ## CLI
 - `add --url <url|->` (or `DEEBEEBRIDGE_URL`) fills every server field from one connection string; flags override it.
 - `add`: prompts for type, name, host, port, database, user, password, SSL, mode, row limit (flags skip prompts; password via `--password-stdin` or `DEEBEEBRIDGE_PASSWORD`). Pings first; on failure offers retry / edit / cancel. Saves the password first, then config, and undoes the password if config fails.
+- `skill install [claude|cursor|codex]`: writes `skills/dbb/SKILL.md` (bundled in the package) into each tool's user-level skills directory; per-project notes live in `.dbb.md` ([skill.md](docs/skill.md)).
 - `list [--json]`, `test <name>`, `mcp` (stdio), `mcp start|stop|status|logs|serve` (detached HTTP server, uncommon port with fallbacks, bearer token in `server.json`).
 - Planned: `edit`, `remove`, `install claude|cursor` (`claude mcp add deebeebridge -- deebeebridge mcp`; merge into `~/.cursor/mcp.json` without clobbering other servers).
 

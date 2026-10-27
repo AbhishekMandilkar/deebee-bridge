@@ -35,6 +35,7 @@ Set `DEEBEEBRIDGE_HOME` to use a different directory (used by tests).
 | `deebeebridge list [--json]` | Shows saved connections. No secrets. |
 | `deebeebridge test <name>` | Connects with the stored password and reports latency. |
 | `deebeebridge mcp` | Starts the stdio [MCP server](mcp.md). |
+| `deebeebridge skill install [claude\|cursor\|codex]` | Installs the `/dbb` [skill](skill.md) globally for those tools (default: every one found). |
 | `deebeebridge mcp start\|stop\|status\|logs` | Runs the same server in the background over HTTP ([mcp.md](mcp.md#background-http-server)). |
 
 **From a URL:** `deebeebridge add --url - --name app-db` reads `scheme://user:password@host:port/database?sslmode=require`
