@@ -1,7 +1,9 @@
 import { cn } from "@deebeebridge/ui/lib/utils";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { CopyButton } from "../copy-button";
+import { at, Typed, typingMs, Words } from "./motion";
+import { Stage } from "./stage";
 
 export const GITHUB_URL = "https://github.com/AbhishekMandilkar/deebee-bridge";
 export const DOCS_URL = `${GITHUB_URL}/tree/main/docs`;
@@ -36,6 +38,11 @@ export function Section({
 	lead?: ReactNode;
 	children: ReactNode;
 }) {
+	// The title rises in word by word, then the lead follows.
+	const WORD_START = 120;
+	const WORD_STEP = 35;
+	const wordCount = typeof title === "string" ? title.split(" ").length : 4;
+	const leadAt = WORD_START + wordCount * WORD_STEP + 150;
 	return (
 		<section
 			id={id}
@@ -43,21 +50,33 @@ export function Section({
 			className="border-t border-border py-20 sm:py-28"
 		>
 			<Container>
-				<p className="font-mono text-xs tracking-wide text-text-subtle uppercase">
-					<span aria-hidden>{index} / </span>
-					{label}
-				</p>
-				<h2
-					id={`${id}-title`}
-					className="mt-4 max-w-2xl text-3xl font-semibold tracking-tight text-balance text-foreground sm:text-4xl"
-				>
-					{title}
-				</h2>
-				{lead ? (
-					<p className="mt-4 max-w-2xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">
-						{lead}
+				<Stage>
+					<p
+						className="beat font-mono text-xs tracking-wide text-text-subtle uppercase"
+						style={at(0)}
+					>
+						<span aria-hidden>{index} / </span>
+						{label}
 					</p>
-				) : null}
+					<h2
+						id={`${id}-title`}
+						className="mt-4 max-w-2xl text-3xl font-semibold tracking-tight text-balance text-foreground sm:text-4xl"
+					>
+						{typeof title === "string" ? (
+							<Words text={title} start={WORD_START} step={WORD_STEP} />
+						) : (
+							title
+						)}
+					</h2>
+					{lead ? (
+						<p
+							className="beat mt-4 max-w-2xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg"
+							style={at(leadAt)}
+						>
+							{lead}
+						</p>
+					) : null}
+				</Stage>
 				<div className="mt-12">{children}</div>
 			</Container>
 		</section>
@@ -69,17 +88,22 @@ export function Terminal({
 	title,
 	children,
 	className,
+	style,
 	wrap = false,
 }: {
 	title: string;
 	children: ReactNode;
 	className?: string;
+	style?: CSSProperties;
 	/** Wrap long lines instead of scrolling. Children should be `Line`s. */
 	wrap?: boolean;
 }) {
 	const body = "p-4 font-mono text-sm leading-relaxed text-foreground";
 	return (
-		<figure className={cn("border border-border bg-surface", className)}>
+		<figure
+			className={cn("border border-border bg-surface", className)}
+			style={style}
+		>
 			<figcaption className="border-b border-border px-4 py-2 font-mono text-xs text-text-subtle">
 				{title}
 			</figcaption>
@@ -102,13 +126,17 @@ export function Terminal({
 /** One row of a wrapping terminal: a fixed gutter, then text that wraps in its own column. */
 export function Line({
 	speaker,
+	className,
+	style,
 	children,
 }: {
 	speaker?: string;
+	className?: string;
+	style?: CSSProperties;
 	children: ReactNode;
 }) {
 	return (
-		<div className="flex gap-3">
+		<div className={cn("flex gap-3", className)} style={style}>
 			<span
 				aria-hidden={speaker ? undefined : true}
 				className="w-12 shrink-0 text-text-subtle select-none"
@@ -145,18 +173,30 @@ export function Dim({ children }: { children: ReactNode }) {
 	return <span className="text-text-subtle">{children}</span>;
 }
 
-/** A single copyable shell command in a bordered bar. */
+/** How long a `CommandLine` with `at` takes to arrive and type its command. */
+export const commandLineMs = (command: string) => 250 + typingMs(command);
+
+/** A single copyable shell command in a bordered bar. With `at`, it arrives and types itself out. */
 export function CommandLine({
 	command,
 	label,
 	size = "md",
+	at: start,
 }: {
 	command: string;
 	label: string;
 	size?: "md" | "lg";
+	at?: number;
 }) {
+	const animated = start !== undefined;
 	return (
-		<div className="flex items-stretch justify-between border border-border bg-surface">
+		<div
+			className={cn(
+				"flex items-stretch justify-between border border-border bg-surface",
+				animated && "beat",
+			)}
+			style={animated ? at(start) : undefined}
+		>
 			<div className="flex min-w-0 items-center overflow-x-auto px-4 py-3 font-mono">
 				<code
 					className={cn(
@@ -167,7 +207,7 @@ export function CommandLine({
 					<span aria-hidden className="text-text-subtle select-none">
 						${" "}
 					</span>
-					{command}
+					{animated ? <Typed text={command} at={start + 250} caret /> : command}
 				</code>
 			</div>
 			<div className="flex shrink-0 items-center border-l border-border">

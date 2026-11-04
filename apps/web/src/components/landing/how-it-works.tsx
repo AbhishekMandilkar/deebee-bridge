@@ -1,6 +1,9 @@
 import { ArrowDown, ArrowRight } from "lucide-react";
 
+import { GlowGrid } from "./glow-grid";
+import { at } from "./motion";
 import { InlineCode, Section } from "./shared";
+import { Stage } from "./stage";
 
 const flow = [
 	{ name: "Your agent", detail: "Claude Code, Cursor or any MCP client" },
@@ -11,6 +14,20 @@ const flow = [
 	{ name: "Database driver", detail: "pg or mysql2, with a read-only session" },
 	{ name: "Your database", detail: "PostgreSQL or MySQL" },
 ];
+
+/* What crosses each hop while its box is lit. Decorative: the boxes and the
+ * copy around them carry the same facts. */
+const wire = [
+	'run_query { connection: "app-db", sql: "SELECT …" }',
+	'resolve "app-db" → host, user, password from secrets.json',
+	"read-only session · one SELECT, parsed and allowed",
+	"rows back · capped at 500 · truncated flag if cut",
+];
+
+/* The request loop starts once the boxes have arrived, then spends 1.2s on each
+ * hop of a 6s cycle (see the flow-* keyframes in index.css). */
+const FLOW_AT = 900;
+const HOP = 1200;
 
 const stores = [
 	{
@@ -49,6 +66,82 @@ const guarantees = [
 	},
 ];
 
+function RequestPath() {
+	return (
+		// Loops only while on screen.
+		<Stage once={false}>
+			<h3 className="sr-only">Request path</h3>
+			<ol className="relative grid list-none gap-0 border border-border md:grid-cols-4">
+				{flow.map((step, i) => (
+					<li
+						key={step.name}
+						className="relative border-t border-border first:border-t-0 md:border-t-0 md:border-l md:first:border-l-0"
+					>
+						<span
+							aria-hidden
+							className="flow-box pointer-events-none absolute inset-0 bg-foreground/[0.06]"
+							style={at(FLOW_AT + i * HOP)}
+						/>
+						<div className="beat relative p-5" style={at(i * 90)}>
+							<p className="font-mono text-xs text-text-subtle" aria-hidden>
+								{i + 1}
+							</p>
+							<p className="mt-2 font-mono text-sm font-medium text-foreground">
+								{step.name}
+							</p>
+							<p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+								{step.detail}
+							</p>
+						</div>
+						{i < flow.length - 1 ? (
+							<span
+								aria-hidden
+								className="beat absolute -bottom-3 left-5 z-10 flex size-6 items-center justify-center border border-border bg-background text-text-subtle md:top-1/2 md:right-0 md:bottom-auto md:left-auto md:-translate-y-1/2 md:translate-x-1/2"
+								style={at(i * 90 + 140)}
+							>
+								{/* Flashes as the request crosses this hop. */}
+								<span
+									className="flow-hop absolute -inset-px border border-foreground bg-foreground/15"
+									style={at(FLOW_AT + (i + 1) * HOP - 250)}
+								/>
+								<ArrowDown className="relative size-3.5 md:hidden" />
+								<ArrowRight className="relative hidden size-3.5 md:block" />
+							</span>
+						) : null}
+					</li>
+				))}
+				{/* The request itself: a bar that steps along the bottom edge, one column per hop. */}
+				<li
+					aria-hidden
+					className="flow-bar pointer-events-none absolute bottom-0 left-0 hidden h-0.5 w-1/4 bg-foreground md:block"
+					style={at(FLOW_AT)}
+				/>
+			</ol>
+			<div
+				aria-hidden
+				className="beat mt-4 flex items-center gap-4 border border-border bg-surface px-4 py-3 font-mono text-xs motion-reduce:hidden"
+				style={at(flow.length * 90 + 100)}
+			>
+				<span className="flex shrink-0 items-center gap-2 tracking-wide text-text-subtle uppercase">
+					<span className="size-1.5 bg-foreground motion-safe:animate-pulse" />
+					On the wire
+				</span>
+				<span className="grid min-w-0 flex-1">
+					{wire.map((w, i) => (
+						<span
+							key={w}
+							className="flow-text col-start-1 row-start-1 truncate text-foreground"
+							style={at(FLOW_AT + i * HOP)}
+						>
+							{w}
+						</span>
+					))}
+				</span>
+			</div>
+		</Stage>
+	);
+}
+
 export function HowItWorks() {
 	return (
 		<Section
@@ -60,39 +153,13 @@ export function HowItWorks() {
 		>
 			<div className="space-y-16">
 				<div>
-					<h3 className="sr-only">Request path</h3>
-					<ol className="grid list-none gap-0 border border-border md:grid-cols-4">
-						{flow.map((step, i) => (
-							<li
-								key={step.name}
-								className="relative border-t border-border p-5 first:border-t-0 md:border-t-0 md:border-l md:first:border-l-0"
-							>
-								<p className="font-mono text-xs text-text-subtle" aria-hidden>
-									{i + 1}
-								</p>
-								<p className="mt-2 font-mono text-sm font-medium text-foreground">
-									{step.name}
-								</p>
-								<p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-									{step.detail}
-								</p>
-								{i < flow.length - 1 ? (
-									<span
-										aria-hidden
-										className="absolute -bottom-3 left-5 z-10 flex size-6 items-center justify-center border border-border bg-background text-text-subtle md:top-1/2 md:right-0 md:bottom-auto md:left-auto md:-translate-y-1/2 md:translate-x-1/2"
-									>
-										<ArrowDown className="size-3.5 md:hidden" />
-										<ArrowRight className="hidden size-3.5 md:block" />
-									</span>
-								) : null}
-							</li>
-						))}
-					</ol>
-					<div className="mt-4 grid gap-4 md:grid-cols-2">
-						{stores.map((s) => (
+					<RequestPath />
+					<Stage className="mt-4 grid gap-4 md:grid-cols-2">
+						{stores.map((s, i) => (
 							<div
 								key={s.name}
-								className="border border-dashed border-border p-5"
+								className="beat border border-dashed border-border p-5"
+								style={at(i * 90)}
 							>
 								<p className="font-mono text-xs tracking-wide text-text-subtle uppercase">
 									Read at startup
@@ -105,11 +172,14 @@ export function HowItWorks() {
 								</p>
 							</div>
 						))}
-					</div>
+					</Stage>
 				</div>
 
-				<div>
-					<h3 className="text-lg font-semibold text-foreground">
+				<Stage>
+					<h3
+						className="beat text-lg font-semibold text-foreground"
+						style={at(0)}
+					>
 						What the agent gets
 					</h3>
 					<table className="mt-4 w-full border-collapse text-left text-sm">
@@ -117,7 +187,10 @@ export function HowItWorks() {
 							The five MCP tools. Each takes a connection name.
 						</caption>
 						<thead>
-							<tr className="border-b border-border font-mono text-xs tracking-wide text-text-subtle uppercase">
+							<tr
+								className="beat border-b border-border font-mono text-xs tracking-wide text-text-subtle uppercase"
+								style={at(80)}
+							>
 								<th scope="col" className="py-2 pr-4 font-normal">
 									Tool
 								</th>
@@ -127,8 +200,12 @@ export function HowItWorks() {
 							</tr>
 						</thead>
 						<tbody>
-							{tools.map(([tool, returns]) => (
-								<tr key={tool} className="border-b border-border align-top">
+							{tools.map(([tool, returns], i) => (
+								<tr
+									key={tool}
+									className="beat border-b border-border align-top"
+									style={at(140 + i * 60)}
+								>
 									<th
 										scope="row"
 										className="py-3 pr-4 font-mono font-medium whitespace-nowrap text-foreground"
@@ -140,28 +217,38 @@ export function HowItWorks() {
 							))}
 						</tbody>
 					</table>
-				</div>
+				</Stage>
 
-				<div>
-					<h3 className="text-lg font-semibold text-foreground">
+				<Stage>
+					<h3
+						className="beat text-lg font-semibold text-foreground"
+						style={at(0)}
+					>
 						What it guarantees
 					</h3>
-					<ul className="mt-4 grid list-none gap-px border border-border bg-border md:grid-cols-3">
-						{guarantees.map((g) => (
-							<li key={g.title} className="bg-background p-5">
+					<GlowGrid className="mt-4 grid list-none gap-px border border-border bg-border md:grid-cols-3">
+						{guarantees.map((g, i) => (
+							<li
+								key={g.title}
+								className="beat relative bg-background p-5"
+								style={at(100 + i * 90)}
+							>
 								<p className="font-medium text-foreground">{g.title}</p>
 								<p className="mt-2 text-sm leading-relaxed text-muted-foreground">
 									{g.body}
 								</p>
 							</li>
 						))}
-					</ul>
-					<p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+					</GlowGrid>
+					<p
+						className="beat mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground"
+						style={at(100 + guarantees.length * 90 + 100)}
+					>
 						Read-write is opt-in per connection. A database user with{" "}
 						<InlineCode>SELECT</InlineCode> grants only is still the real
 						guarantee, so use one.
 					</p>
-				</div>
+				</Stage>
 			</div>
 		</Section>
 	);

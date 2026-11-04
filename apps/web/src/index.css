@@ -49,3 +49,324 @@ html {
 		scroll-behavior: auto;
 	}
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Landing motion
+ *
+ * Everything is a CSS animation with its delay in `--at`, so it runs on the
+ * compositor while the page hydrates. Inside a `[data-stage]`, animations sit
+ * paused at their first frame until the stage scrolls into view and gets
+ * `data-play`. Without JavaScript the pause never applies, so everything simply
+ * plays on load and ends fully visible.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/* Typing speed. Keep in step with CHAR_MS in components/landing/motion.tsx. */
+:root {
+	--char-ms: 24ms;
+}
+
+@keyframes beat-in {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+		filter: blur(6px);
+	}
+}
+@keyframes word-in {
+	from {
+		transform: translateY(110%);
+	}
+}
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+}
+@keyframes clip-in {
+	from {
+		clip-path: inset(0 100% 0 0);
+	}
+}
+@keyframes caret-move {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(calc(var(--n) * 1ch));
+	}
+}
+@keyframes caret-blink {
+	50% {
+		opacity: 0;
+	}
+}
+@keyframes caret-out {
+	to {
+		opacity: 0;
+	}
+}
+@keyframes thinking {
+	0%,
+	100% {
+		opacity: 0;
+	}
+	12%,
+	88% {
+		opacity: 1;
+	}
+}
+@keyframes thinking-dot {
+	50% {
+		opacity: 1;
+	}
+}
+
+/* A block that arrives: rises 10px out of a blur. */
+.beat {
+	animation: beat-in 700ms var(--ease-out) var(--at, 0ms) both;
+}
+
+/* A word that rises out of its own line. The mask's padding keeps ascenders and
+ * descenders from clipping; `overflow: clip` keeps the text baseline. */
+.word-mask {
+	display: inline-block;
+	overflow: clip;
+	padding: 0.12em 0 0.18em;
+	margin: -0.12em 0 -0.18em;
+}
+.beat-word {
+	display: inline-block;
+	animation: word-in 900ms var(--ease-out) var(--at, 0ms) both;
+}
+
+/* Monospace text typed out one character per step; `--n` is the length. */
+.beat-type {
+	animation: clip-in calc(var(--n) * var(--char-ms)) steps(var(--n), end)
+		var(--at, 0ms) both;
+}
+.beat-caret {
+	animation:
+		caret-move calc(var(--n) * var(--char-ms)) steps(var(--n), end)
+		var(--at, 0ms) both,
+		caret-blink 1s steps(1, end)
+		calc(var(--at, 0ms) + var(--n) * var(--char-ms)) 3,
+		caret-out 200ms var(--ease-out)
+		calc(var(--at, 0ms) + var(--n) * var(--char-ms) + 3s) forwards;
+}
+
+/* A highlight drawn across text, like a marker. */
+.beat-sweep {
+	animation: clip-in 600ms var(--ease-in-out) var(--at, 0ms) both;
+}
+
+/* Three dots shown for `--for` while an agent "thinks". */
+.beat-thinking {
+	animation: thinking var(--for, 800ms) linear var(--at, 0ms) both;
+}
+.beat-thinking > * {
+	opacity: 0.3;
+	animation: thinking-dot 600ms ease-in-out var(--at, 0ms) 3;
+}
+
+/* How it works: a request walks the path on a 6s loop, 1.2s per hop. */
+@keyframes flow-box {
+	0% {
+		opacity: 0;
+	}
+	3%,
+	17% {
+		opacity: 1;
+	}
+	20%,
+	100% {
+		opacity: 0;
+	}
+}
+@keyframes flow-text {
+	0% {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	3%,
+	17% {
+		opacity: 1;
+		transform: none;
+	}
+	20%,
+	100% {
+		opacity: 0;
+		transform: translateY(-6px);
+	}
+}
+@keyframes flow-bar {
+	0% {
+		opacity: 0;
+		transform: translateX(0);
+	}
+	3% {
+		opacity: 1;
+	}
+	15% {
+		transform: translateX(0);
+	}
+	20%,
+	35% {
+		transform: translateX(100%);
+	}
+	40%,
+	55% {
+		transform: translateX(200%);
+	}
+	60% {
+		transform: translateX(300%);
+	}
+	77% {
+		opacity: 1;
+	}
+	80%,
+	100% {
+		opacity: 0;
+		transform: translateX(300%);
+	}
+}
+@keyframes flow-hop {
+	0%,
+	10%,
+	100% {
+		opacity: 0;
+	}
+	4% {
+		opacity: 1;
+	}
+}
+.flow-box,
+.flow-text,
+.flow-bar,
+.flow-hop {
+	opacity: 0;
+}
+.flow-box {
+	animation: flow-box 6s linear var(--at, 0ms) infinite both;
+}
+.flow-text {
+	animation: flow-text 6s var(--ease-out) var(--at, 0ms) infinite both;
+}
+.flow-bar {
+	animation: flow-bar 6s var(--ease-in-out) var(--at, 0ms) infinite both;
+}
+.flow-hop {
+	animation: flow-hop 6s linear var(--at, 0ms) infinite both;
+}
+
+@media (scripting: enabled) {
+	[data-stage]:not([data-play])
+		:is(
+			.beat,
+			.beat-word,
+			.beat-type,
+			.beat-caret,
+			.beat-sweep,
+			.beat-thinking,
+			.beat-thinking > *,
+			.flow-box,
+			.flow-text,
+			.flow-bar,
+			.flow-hop
+		) {
+		animation-play-state: paused;
+	}
+}
+
+/* Hero backdrop: the dot grid settles in once on load. */
+@keyframes grid-in {
+	from {
+		opacity: 0;
+		transform: scale(1.06);
+	}
+}
+.hero-grid {
+	animation: grid-in 1600ms var(--ease-out) both;
+}
+
+/* Guarantees: grid lines light up around the pointer. */
+.glow {
+	opacity: 0;
+	background: radial-gradient(
+		260px circle at var(--x, 50%) var(--y, 50%),
+		color-mix(in oklch, var(--foreground) 70%, transparent),
+		transparent 70%
+	);
+	transition: opacity 400ms var(--ease-out);
+}
+.glow[data-on] {
+	opacity: 1;
+}
+
+/* Setup: a rail fills as you read down the steps, scrubbed by scroll. */
+@keyframes rail-grow {
+	from {
+		transform: scaleY(0);
+	}
+	to {
+		transform: scaleY(1);
+	}
+}
+@keyframes rail-on {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+.rail-fill {
+	visibility: hidden;
+	transform-origin: top;
+}
+.rail-lit {
+	opacity: 0;
+}
+@supports (animation-timeline: view()) {
+	@media (prefers-reduced-motion: no-preference) {
+		.rail {
+			view-timeline: --rail;
+		}
+		.rail-fill {
+			visibility: visible;
+			animation: rail-grow linear both;
+			animation-timeline: --rail;
+			animation-range: cover 50vh cover calc(100% - 50vh);
+		}
+		.rail-lit {
+			animation: rail-on linear both;
+			animation-timeline: view();
+			animation-range: cover calc(50vh - 16px) cover 50vh;
+		}
+	}
+}
+
+/* Reduced motion: keep the fades, drop movement, blur, typing and loops. */
+@media (prefers-reduced-motion: reduce) {
+	.beat,
+	.beat-word {
+		animation-name: fade-in;
+		animation-duration: 400ms;
+	}
+	.beat-type,
+	.beat-sweep {
+		animation: fade-in 300ms var(--ease-out) var(--at, 0ms) both;
+	}
+	.beat-caret,
+	.beat-thinking {
+		display: none;
+	}
+	.flow-box,
+	.flow-text,
+	.flow-bar,
+	.flow-hop {
+		animation: none;
+	}
+	.hero-grid {
+		animation-name: fade-in;
+	}
+}
