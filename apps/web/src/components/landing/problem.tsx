@@ -1,3 +1,4 @@
+import { LeakHighlight } from "./leak-highlight";
 import { Dim, Line, Section, Terminal } from "./shared";
 
 export function Problem() {
@@ -16,9 +17,7 @@ export function Problem() {
 						<Line>
 							<span className="[overflow-wrap:anywhere]">
 								postgres://admin:
-								<mark className="bg-foreground px-1 text-background">
-									hunter2
-								</mark>
+								<LeakHighlight>hunter2</LeakHighlight>
 								@db.internal/app
 							</span>
 						</Line>

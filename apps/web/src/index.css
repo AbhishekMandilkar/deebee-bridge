@@ -22,6 +22,15 @@
 	--surface: oklch(0.18 0 0);
 }
 
+/*
+ * Strong curves. These replace Tailwind's built-in `ease-out` and `ease-in-out`,
+ * which are too weak to read as deliberate motion.
+ */
+@theme {
+	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+	--ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
 @theme inline {
 	--font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 	--font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
