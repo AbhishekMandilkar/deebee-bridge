@@ -18,8 +18,8 @@ const stores = [
 		detail: "Host, port, database, user, mode. No passwords.",
 	},
 	{
-		name: "OS keychain",
-		detail: "Passwords, one entry per connection name.",
+		name: "secrets.json",
+		detail: "Passwords (plain text, mode 0600), one entry per connection name.",
 	},
 ];
 
@@ -28,6 +28,7 @@ const tools = [
 		"list_connections",
 		"Name, type, database and mode of each saved connection",
 	],
+	["list_databases", "The databases on the connection's server"],
 	["list_tables", "Tables and views with approximate row counts"],
 	["describe_table", "Columns, types, nullability, primary key, indexes"],
 	["run_query", "Columns and rows, plus rowCount, truncated and durationMs"],
@@ -44,7 +45,7 @@ const guarantees = [
 	},
 	{
 		title: "Small on purpose",
-		body: "Rows are capped at 500 by default, cells at 2,000 characters and responses at 64 KB, with a truncated flag. Four tools cost about 400 tokens.",
+		body: "Rows are capped at 500 by default, cells at 2,000 characters and responses at 64 KB, with a truncated flag. Five tools cost about 600 tokens.",
 	},
 ];
 
@@ -55,7 +56,7 @@ export function HowItWorks() {
 			index="03"
 			label="How it works"
 			title="A local MCP server that only knows names."
-			lead="The agent starts deebeebridge as a child process. It resolves the name, fetches the password from your keychain, and talks to the database for you."
+			lead="The agent starts deebeebridge as a child process. It resolves the name, reads the password from your private secrets file, and talks to the database for you."
 		>
 			<div className="space-y-16">
 				<div>
@@ -113,7 +114,7 @@ export function HowItWorks() {
 					</h3>
 					<table className="mt-4 w-full border-collapse text-left text-sm">
 						<caption className="sr-only">
-							The four MCP tools. Each takes a connection name.
+							The five MCP tools. Each takes a connection name.
 						</caption>
 						<thead>
 							<tr className="border-b border-border font-mono text-xs tracking-wide text-text-subtle uppercase">

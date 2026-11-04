@@ -19,7 +19,7 @@ export function Hero() {
 					<span className="block text-text-subtle">Not the password.</span>
 				</h1>
 				<p className="mt-6 max-w-2xl text-lg leading-relaxed text-pretty text-text-secondary sm:text-xl">
-					Save a connection once and the password goes into your OS keychain.
+					Save a connection once and the password goes into a private file only you can read.
 					Claude Code, Cursor and any MCP client reach the database by name, and
 					never see a host, user or password.
 				</p>

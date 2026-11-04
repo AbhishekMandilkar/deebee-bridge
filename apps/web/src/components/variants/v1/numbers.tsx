@@ -45,9 +45,9 @@ function CountUp({
 
 const stats = [
 	{
-		node: <CountUp to={400} prefix="≈" />,
+		node: <CountUp to={600} prefix="≈" />,
 		unit: "tokens",
-		body: "for all four tool definitions. They're paid for in every session, so they stay terse.",
+		body: "for all five tool definitions. They're paid for in every session, so they stay terse.",
 	},
 	{
 		node: <CountUp to={500} />,
@@ -63,6 +63,7 @@ const stats = [
 
 const tools = [
 	["list_connections", "what names exist"],
+	["list_databases", "databases on the server"],
 	["list_tables", "tables and rough row counts"],
 	["describe_table", "columns, keys, indexes"],
 	["run_query", "one SQL statement"],
@@ -80,7 +81,7 @@ export function Numbers() {
 					id="small-title"
 					kicker="Context budget"
 					title="Small on purpose."
-					lead="Every token an agent spends on tooling is one it can't spend on your problem. Four tools, compact positional JSON, hard caps."
+					lead="Every token an agent spends on tooling is one it can't spend on your problem. Five tools, compact positional JSON, hard caps."
 				/>
 				<dl className="mt-14 grid gap-px border border-border bg-border md:grid-cols-3">
 					{stats.map((s) => (

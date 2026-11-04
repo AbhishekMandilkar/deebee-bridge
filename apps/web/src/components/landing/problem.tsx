@@ -44,7 +44,7 @@ export function Problem() {
 					<p className="mt-3 text-sm leading-relaxed text-muted-foreground">
 						The agent holds{" "}
 						<b className="font-medium text-foreground">app-db</b> and nothing
-						else. The password stays in your keychain.
+						else. The password stays in a private file on your machine.
 					</p>
 				</div>
 			</div>

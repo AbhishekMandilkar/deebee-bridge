@@ -45,7 +45,7 @@ const ADD: TermLine[] = [
 	{ kind: "ask", label: "Mode", answer: "read-only" },
 	{
 		kind: "out",
-		text: 'Connected in 38ms. Saved "app-db" (password stored in the OS keychain).',
+		text: 'Connected in 38ms. Saved "app-db" (password stored in secrets.json, mode 0600).',
 	},
 	{ kind: "cmd", text: "deebeebridge list" },
 	...table(
@@ -91,7 +91,7 @@ const STEPS = [
 	{
 		title: "Save a connection",
 		blurb:
-			"The password goes into your OS keychain. New connections are read-only.",
+			"The password is saved to a private file, readable only by you. New connections are read-only.",
 		title2: "add a connection",
 	},
 	{

@@ -11,7 +11,7 @@ import { Setup } from "@/components/variants/v1/setup";
 export const metadata: Metadata = {
 	title: "deebeebridge: your agent queries prod, never the password",
 	description:
-		"deebeebridge keeps database credentials in your OS keychain and gives AI agents a connection name instead.",
+		"deebeebridge keeps database credentials in a private file on your machine and gives AI agents a connection name instead.",
 };
 
 export default function VariantOne() {

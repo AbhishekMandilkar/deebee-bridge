@@ -5,7 +5,7 @@ import { SectionHead, Wrap } from "./ui";
 const faqs = [
 	{
 		q: "Can the agent read my password?",
-		a: "No tool accepts or returns credentials, and passwords are masked from every error and log line. One honest limit: deebeebridge isn't a sandbox. An agent with unrestricted shell access runs as you. What it does is keep secrets out of prompts, transcripts and tool results.",
+		a: "No tool accepts or returns credentials, and passwords are masked from every error and log line. One honest limit: deebeebridge isn't a sandbox. An agent with unrestricted shell access runs as you. What it does is keep secrets out of prompts, transcripts and tool results. Passwords sit in a plain-text file that anything running as you can read, so give the connection a database user with read-only grants.",
 	},
 	{
 		q: "Can an agent write to my database?",
@@ -13,11 +13,11 @@ const faqs = [
 	},
 	{
 		q: "Where does everything live?",
-		a: "Settings (host, port, user, mode) live in ~/.deebeebridge/connections.json, with no passwords in it. Passwords live in your OS keychain under the service name deebeebridge. Set DEEBEEBRIDGE_HOME to move the folder.",
+		a: "Settings (host, port, user, mode) live in ~/.deebeebridge/connections.json, with no passwords in it. Passwords live next to it in secrets.json, a plain-text file only your user can read (mode 0600), like ~/.pgpass or an SSH key. Set DEEBEEBRIDGE_HOME to move the folder.",
 	},
 	{
 		q: "Do I have to run a server?",
-		a: "No. Your agent starts deebeebridge mcp as a child process over stdio. There's no daemon, no HTTP port and no account. HTTP transport and cloud sync are out of scope.",
+		a: "No. Your agent starts deebeebridge mcp as a child process over stdio. There's no account and nothing to deploy. If you'd rather have one always-on server, deebeebridge mcp start runs one on 127.0.0.1 behind a bearer token, but it's optional.",
 	},
 	{
 		q: "Which databases and agents work?",

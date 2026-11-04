@@ -31,9 +31,9 @@ export function Hero() {
 					</span>
 				</h1>
 				<p className="mt-6 max-w-2xl text-pretty text-lg text-text-secondary leading-relaxed sm:text-xl">
-					deebeebridge keeps database credentials in your OS keychain and gives
-					AI agents a connection name instead. Four small tools, read-only by
-					default, nothing to host.
+					deebeebridge keeps database credentials in a private file on your
+					machine and gives AI agents a connection name instead. Five small
+					tools, read-only by default, nothing to host.
 				</p>
 				<div className="mt-9 max-w-md">
 					<InstallBar command={INSTALL_COMMAND} label="install command" />

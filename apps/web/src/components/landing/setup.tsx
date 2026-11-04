@@ -58,8 +58,8 @@ export function Setup() {
 						<Dim>? Host</Dim> db.example.com{"\n"}
 						<Dim>? User</Dim> readonly{"\n"}
 						<Dim>? Password</Dim> ********{"\n"}
-						Connected in 38ms. Saved "app-db" (password stored in the OS
-						keychain).
+						Connected in 38ms. Saved "app-db" (password stored in
+						secrets.json, mode 0600).
 					</Terminal>
 					<p className="text-sm leading-relaxed text-muted-foreground">
 						It tests the connection before saving, and new connections are{" "}

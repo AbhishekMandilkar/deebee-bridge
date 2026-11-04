@@ -9,7 +9,7 @@ export interface TraceStep {
 	label: string;
 	detail: string;
 	status: StepStatus;
-	/** Marks the step that touches the keychain. */
+	/** Marks the step that reads the password file. */
 	secret?: boolean;
 }
 
@@ -45,8 +45,8 @@ export const SCENARIOS: Scenario[] = [
 				status: "ok",
 			},
 			{
-				label: "Unlock the password",
-				detail: "read from the OS keychain, held in memory only",
+				label: "Load the password",
+				detail: "read from ~/.deebeebridge/secrets.json, used only to connect",
 				status: "ok",
 				secret: true,
 			},
@@ -76,8 +76,8 @@ export const SCENARIOS: Scenario[] = [
 				status: "ok",
 			},
 			{
-				label: "Unlock the password",
-				detail: "read from the OS keychain, held in memory only",
+				label: "Load the password",
+				detail: "read from ~/.deebeebridge/secrets.json, used only to connect",
 				status: "ok",
 				secret: true,
 			},
@@ -112,8 +112,8 @@ export const SCENARIOS: Scenario[] = [
 				status: "ok",
 			},
 			{
-				label: "Unlock the password",
-				detail: "read from the OS keychain, held in memory only",
+				label: "Load the password",
+				detail: "read from ~/.deebeebridge/secrets.json, used only to connect",
 				status: "ok",
 				secret: true,
 			},
@@ -148,8 +148,8 @@ export const SCENARIOS: Scenario[] = [
 				status: "ok",
 			},
 			{
-				label: "Unlock the password",
-				detail: "read from the OS keychain, held in memory only",
+				label: "Load the password",
+				detail: "read from ~/.deebeebridge/secrets.json, used only to connect",
 				status: "ok",
 				secret: true,
 			},
