@@ -2,7 +2,7 @@
 
 Give AI coding agents access to your databases **without giving them your credentials**.
 
-You register a connection once. The password goes into your OS keychain. Claude Code, Cursor or any
+You register a connection once. The password is saved in a private file on your machine (`0600`). Claude Code, Cursor or any
 MCP client then reaches the database by **connection name** through a local server, and can list
 tables, read schemas and run queries. Writes are blocked unless you allow them.
 
@@ -10,18 +10,23 @@ Supports **PostgreSQL** and **MySQL**. ClickHouse is planned.
 
 ## Install
 
-Not published to npm yet; run it from source (Node 20+ and [Bun](https://bun.sh)):
+Requires Node 20+.
 
 ```bash
-git clone <this repo> && cd deebeebridge
-bun install
-cd packages/cli && bun run build
-ln -s "$PWD/dist/cli.js" ~/.local/bin/deebeebridge   # any directory on your PATH
-ln -s "$PWD/dist/cli.js" ~/.local/bin/dbb            # optional short alias
+npm i -g deebeebridge
 deebeebridge --help
 ```
 
-The package installs two identical commands: `deebeebridge` and the short alias `dbb`.
+This installs two identical commands: `deebeebridge` and the short alias `dbb`.
+
+To run from source instead (needs [Bun](https://bun.sh)):
+
+```bash
+git clone https://github.com/AbhishekMandilkar/deebee-bridge.git && cd deebee-bridge
+bun install
+cd packages/cli && bun run build
+ln -s "$PWD/dist/cli.js" ~/.local/bin/deebeebridge   # any directory on your PATH
+```
 
 ## Use it
 
@@ -72,16 +77,41 @@ Cursor, in `~/.cursor/mcp.json`:
 { "mcpServers": { "deebeebridge": { "command": "deebeebridge", "args": ["mcp"] } } }
 ```
 
+**Optional: one background server instead.** `deebeebridge mcp` talks over stdio and lives only as long as
+its client. Run `deebeebridge mcp start` for a server that keeps running after you close the terminal;
+it prints the URL and the exact command for your client:
+
+```bash
+deebeebridge mcp start     # MCP server running at http://127.0.0.1:43117/mcp (pid 4821) + connect commands
+deebeebridge mcp status    # running? where?
+deebeebridge mcp logs      # tail of ~/.deebeebridge/server.log
+deebeebridge mcp stop
+```
+
+It listens on `127.0.0.1` only, on an uncommon port (43117, then 38207 or 29417 if taken; the last one used
+is tried first so the URL stays the same). Every request needs the bearer token that `start` prints (kept
+in `~/.deebeebridge/server.json`, mode `0600`); browser requests are refused. It does not restart after a reboot.
+
 Then ask the agent something like *"Using the app-db connection, which tables have the most rows?"*
 It never sees a host, user or password, only the name.
 
+**4. Optional: the `/dbb` shortcut.** Install a skill so you can type `/dbb pls check last logged in user`
+instead of spelling out the connection and tables:
+
+```bash
+deebeebridge skill install      # Claude Code, Cursor and Codex, whichever are on this machine (global)
+```
+
+Put per-project hints (default connection, key tables) in a `.dbb.md` at the project root. Details: [skill](docs/skill.md).
+
 ## What the agent gets
 
-Four small tools (about 400 tokens of definitions), each taking the connection name:
+Five small tools (about 600 tokens of definitions), each taking the connection name. `list_tables`, `describe_table` and `run_query` also take an optional `database`, so one connection reaches every database on its server:
 
 | Tool | Returns |
 |---|---|
-| `list_connections` | name, type, database, mode of each saved connection |
+| `list_connections` | name, type, default database, mode of each saved connection |
+| `list_databases` | the databases on the connection's server |
 | `list_tables` | tables and views with approximate row counts |
 | `describe_table` | columns, types, nullability, primary key, indexes |
 | `run_query` | `columns` and `rows`, plus `rowCount`, `truncated`, `durationMs` |
@@ -96,25 +126,26 @@ Details: [docs/mcp.md](docs/mcp.md).
 Agent ──MCP over stdio──► deebeebridge mcp ──► driver (pg / mysql2) ──► your database
                                │
                                ├─ ~/.deebeebridge/connections.json   host, port, user, mode… (no passwords)
-                               └─ OS keychain                        passwords
+                               └─ ~/.deebeebridge/secrets.json       passwords (plain text, file mode 0600)
 ```
 
-- **Credentials:** only the connection *name* crosses the MCP boundary. Passwords live in the OS keychain
-  and are masked from every error message and log line.
+- **Credentials:** only the connection *name* crosses the MCP boundary. Passwords live in `secrets.json`, readable
+  only by you (like `~/.ssh` keys or `~/.pgpass`), and are masked from every error message and log line.
+  Anyone who can read your home directory can read them; use a database user with read-only grants.
 - **Read-only connections** are enforced twice. A SQL parser allows only one `SELECT`, `WITH … SELECT`,
   `SHOW`, `DESCRIBE` or `EXPLAIN` statement and rejects anything it cannot parse. The database then
   refuses writes itself (Postgres `READ ONLY` transaction, MySQL read-only session).
 - **Read-write connections** accept any statement; use them deliberately.
 - **stdout** of `deebeebridge mcp` carries MCP protocol only.
 
-Deeper: [connections](docs/connections.md) · [PostgreSQL](docs/postgres.md) · [MySQL](docs/mysql.md) · [MCP server](docs/mcp.md) · [design and roadmap](SPEC.md).
+Deeper: [connections](docs/connections.md) · [PostgreSQL](docs/postgres.md) · [MySQL](docs/mysql.md) · [MCP server](docs/mcp.md) · [`/dbb` skill](docs/skill.md) · [design and roadmap](SPEC.md).
 
 ## Configuration
 
 | Setting | Default |
 |---|---|
 | Config directory | `~/.deebeebridge/` (override with `DEEBEEBRIDGE_HOME`) |
-| Keychain service | `deebeebridge`, one entry per connection name |
+| Passwords | `<config directory>/secrets.json`, one entry per connection name |
 | Password for non-interactive `add` | `--password-stdin`, `DEEBEEBRIDGE_PASSWORD`, or inside the `--url` |
 | Connection URL for `add` | `--url <url>`, `--url -` (stdin) or `DEEBEEBRIDGE_URL` |
 

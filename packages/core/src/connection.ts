@@ -15,7 +15,8 @@ export const connectionSchema = z.object({
 	}),
 	host: z.string().min(1),
 	port: z.number().int().min(1).max(65535),
-	database: z.string().min(1),
+	/** Default database; optional because tools can pick one per call (see `list_databases`). */
+	database: z.string().min(1).optional(),
 	user: z.string().min(1),
 	ssl: z.boolean(),
 	mode: z.enum(["read-only", "read-write"]),

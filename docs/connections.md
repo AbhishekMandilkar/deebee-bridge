@@ -1,6 +1,6 @@
 # Connections
 
-A **connection** is a named, saved way to reach one database. You register it once with
+A **connection** is a named, saved way to reach a database server (and optionally a default database on it). You register it once with
 `deebeebridge add`; afterwards everything (CLI, and later the MCP server) refers to it by
 **name only**. Credentials never leave your machine and never reach an AI agent.
 
@@ -9,7 +9,7 @@ A **connection** is a named, saved way to reach one database. You register it on
 | What | Where | Notes |
 |---|---|---|
 | Non-secret settings | `~/.deebeebridge/connections.json` | file `0600`, dir `0700`, written atomically |
-| Password | OS keychain, service `deebeebridge`, account = connection name | never on disk, in logs, or in output |
+| Password | `~/.deebeebridge/secrets.json` (same permissions, plain text), keyed by connection name | never in `connections.json`, logs, or output |
 
 Set `DEEBEEBRIDGE_HOME` to use a different directory (used by tests).
 
@@ -35,6 +35,8 @@ Set `DEEBEEBRIDGE_HOME` to use a different directory (used by tests).
 | `deebeebridge list [--json]` | Shows saved connections. No secrets. |
 | `deebeebridge test <name>` | Connects with the stored password and reports latency. |
 | `deebeebridge mcp` | Starts the stdio [MCP server](mcp.md). |
+| `deebeebridge skill install [claude\|cursor\|codex]` | Installs the `/dbb` [skill](skill.md) globally for those tools (default: every one found). |
+| `deebeebridge mcp start\|stop\|status\|logs` | Runs the same server in the background over HTTP ([mcp.md](mcp.md#background-http-server)). |
 
 **From a URL:** `deebeebridge add --url - --name app-db` reads `scheme://user:password@host:port/database?sslmode=require`
 from stdin (or pass `--url <url>`, or set `DEEBEEBRIDGE_URL`). The URL supplies type, host, port (else the source's default),
@@ -60,18 +62,18 @@ Failures print `CODE: message` on stderr and exit 1. The message is redacted (pa
 cli  (prompts, flags, output)            packages/cli/src/commands/*
  └─ core  Registry                       packages/core/src/registry.ts
       ├─ ConfigStore  connections.json   config.ts
-      ├─ SecretStore  OS keychain        secrets.ts
+      ├─ SecretStore  secrets.json         secrets.ts
       └─ drivers      one per source     drivers/index.ts  ──► drivers/<source>.ts
 ```
 
-- **Registry** is the only thing that touches config and secrets. `add` writes the keychain
-  first, then the config, and removes the keychain entry if the config write fails, so the two
+- **Registry** is the only thing that touches config and secrets. `add` writes the password
+  first, then the config, and removes the password if the config write fails, so the two
   cannot drift apart. `open(name)` returns a ready `Driver`.
 - **ConfigStore / SecretStore** are injected into `createRegistry({ config, secrets })`. Tests use a
   temp directory and `memorySecrets()`; production uses the defaults.
 - **probe(config, password)** connects, pings, disconnects and returns latency. `add` uses it
   before saving; `test` uses it for stored connections. It redacts the password from any error.
-- **cli is thin**: it never reads files or the keychain directly. Anything needing the keychain,
+- **cli is thin**: it never reads files directly. Anything needing the
   filesystem or a database driver belongs in `core`.
 
 ## Adding a new database source
@@ -102,7 +104,7 @@ Steps:
 Nothing else changes: the type picker, default port, schema validation, `add`, `list`, `test` and the
 registry all read from `drivers`.
 
-A `Driver` also implements `listTables`, `describeTable` and `query` (see `drivers/types.ts`) for the
+A `Driver` also implements `listDatabases`, `listTables`, `describeTable` and `query` (see `drivers/types.ts`) for the
 [MCP server](mcp.md). `query` must stop reading at `limit + 1` rows, and the driver, not the caller, applies
 database-level read-only settings from `config.mode`. `DriverDefinition.dialect` tells the read-only
 classifier which SQL grammar to use.

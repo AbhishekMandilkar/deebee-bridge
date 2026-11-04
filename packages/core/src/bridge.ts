@@ -16,12 +16,14 @@ export function createBridge(registry: Registry) {
 		Promise<{ config: ConnectionConfig; driver: Driver }>
 	>();
 
-	function driverFor(name: string) {
-		let entry = open.get(name);
+	/** One driver per (connection, database): the same login, a different database. */
+	function driverFor(name: string, database?: string) {
+		const key = `${name}\0${database ?? ""}`;
+		let entry = open.get(key);
 		if (!entry) {
-			entry = registry.open(name);
-			entry.catch(() => open.delete(name));
-			open.set(name, entry);
+			entry = registry.open(name, database);
+			entry.catch(() => open.delete(key));
+			open.set(key, entry);
 		}
 		return entry;
 	}
@@ -37,8 +39,13 @@ export function createBridge(registry: Registry) {
 			}));
 		},
 
-		async listTables(connection: string, schema?: string) {
+		async listDatabases(connection: string): Promise<string[]> {
 			const { driver } = await driverFor(connection);
+			return driver.listDatabases();
+		},
+
+		async listTables(connection: string, schema?: string, database?: string) {
+			const { driver } = await driverFor(connection, database);
 			return capOutput(await driver.listTables(schema));
 		},
 
@@ -46,13 +53,19 @@ export function createBridge(registry: Registry) {
 			connection: string,
 			table: string,
 			schema?: string,
+			database?: string,
 		): Promise<TableSchema> {
-			const { driver } = await driverFor(connection);
+			const { driver } = await driverFor(connection, database);
 			return driver.describeTable(table, schema);
 		},
 
-		async runQuery(connection: string, sql: string, params?: unknown[]) {
-			const { config, driver } = await driverFor(connection);
+		async runQuery(
+			connection: string,
+			sql: string,
+			params?: unknown[],
+			database?: string,
+		) {
+			const { config, driver } = await driverFor(connection, database);
 			if (config.mode === "read-only") {
 				assertReadOnly(
 					sql,

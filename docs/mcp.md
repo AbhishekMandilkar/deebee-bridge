@@ -16,21 +16,59 @@ Cursor (`~/.cursor/mcp.json`):
 { "mcpServers": { "deebeebridge": { "command": "deebeebridge", "args": ["mcp"] } } }
 ```
 
+## Background HTTP server
+
+`deebeebridge mcp` (stdio) exists only while its client runs. For a server that outlives the terminal:
+
+```bash
+deebeebridge mcp start     # detaches, prints the URL and copy-paste connect commands, exits
+deebeebridge mcp status | logs [-n 50] | stop
+deebeebridge mcp serve     # same server in the foreground (what `start` runs; handy under a process manager)
+```
+
+| | |
+|---|---|
+| Address | `http://127.0.0.1:<port>/mcp`, loopback only |
+| Port | first free of: the last-used port, 43117, 38207, 29417 (`--port <n>` overrides). Clients keep the URL, so it stays stable across restarts |
+| Auth | `Authorization: Bearer <token>`; the token is created on first start and kept in `server.json` (`0600`) with the port and pid |
+| Refused | missing or wrong token (401), any `Origin` header (403, so web pages cannot drive it), a `Host` other than loopback on our port (403, DNS rebinding), bodies over 1 MB |
+| Other paths | `GET /health` answers without a token and reveals nothing but the name |
+| Files | `~/.deebeebridge/server.json`, `server.log` (trimmed past 1 MB on start) |
+
+Claude Code: `claude mcp add --transport http deebeebridge http://127.0.0.1:43117/mcp --header "Authorization: Bearer <token>"`.
+Cursor: `{"mcpServers":{"deebeebridge":{"url":"…/mcp","headers":{"Authorization":"Bearer <token>"}}}}`.
+
+The server is stateless: each request gets a fresh MCP server over the shared connection pool, so restarting loses nothing.
+Tools, limits and read-only rules are identical to stdio. Anyone holding the token can run read-only queries on every
+saved connection, so treat it like a password (`server.json` has the same permissions as `secrets.json`). It does not
+restart after a reboot, and detaching and stopping are only tested on macOS.
+
 ## Tools
 
-Four tools, about 400 tokens of definitions in total (a test fails if the definitions exceed 3000 characters).
-Every tool takes `connection`, the saved name. `schema` is the MySQL database / Postgres schema and defaults to the connection's own.
+Five tools, about 600 tokens of definitions in total (a test fails if the definitions exceed 3000 characters).
+Every tool takes `connection`, the saved name. A connection reaches every database its login can open: `database` (optional) picks one, and defaults to the connection's own. `schema` is the Postgres schema (MySQL has none; its databases are what `database` selects).
 
 | Tool | Input | Result |
 |---|---|---|
-| `list_connections` | none | `[{name, type, database, mode}]` |
-| `list_tables` | `connection`, `schema?` | `{columns: [name, type, rows], rows}`; `rows` is an approximate count |
-| `describe_table` | `connection`, `table`, `schema?` | `{columns: [{name, type, nullable, default?}], primaryKey, indexes: [{name, columns, unique}]}` |
-| `run_query` | `connection`, `sql`, `params?` | `{columns, rows, rowCount, truncated, durationMs}` |
+| `list_connections` | none | `[{name, type, database?, mode}]` |
+| `list_databases` | `connection` | `[name]`, system schemas left out |
+| `list_tables` | `connection`, `schema?`, `database?` | `{columns: [name, type, rows], rows}`; `rows` is an approximate count |
+| `describe_table` | `connection`, `table`, `schema?`, `database?` | `{columns: [{name, type, nullable, default?}], primaryKey, indexes: [{name, columns, unique}]}` |
+| `run_query` | `connection`, `sql`, `params?`, `database?` | `{columns, rows, rowCount, truncated, durationMs}` |
 
-Deliberately **not** separate tools: `list_databases`, `sample_rows` and `explain_query` (the original brief had them).
-An agent can do each with `run_query` (`SHOW DATABASES`, `SELECT … LIMIT 5`, `EXPLAIN SELECT …`), and every
-tool definition costs context on every session.
+Deliberately **not** separate tools: `sample_rows` and `explain_query` (the original brief had them).
+An agent can do each with `run_query` (`SELECT … LIMIT 5`, `EXPLAIN SELECT …`), and every tool definition costs
+context on every session. `list_databases` earned a tool because `SHOW DATABASES` and `pg_database` differ per
+source, and because a tool is how an agent learns a connection spans several databases.
+
+### Several databases on one connection
+
+`database` runs the call on another database of the same server with the same login and the same read-only rules
+(the bridge keeps one driver per connection and database). Postgres cannot join across databases, so use one query per
+database there. MySQL can also name another database inside a query (`FROM cora.CANVAS c JOIN common.USER u …`).
+The login must be allowed to open the other databases; otherwise the agent gets the database's own error.
+A connection saved without a default database (`add` accepts an empty one, or a URL with none) asks the agent to call
+`list_databases` and pass `database`. On Postgres, leaving it out means the database named after the user.
 
 ### Keeping output small
 
@@ -63,7 +101,9 @@ database (Postgres `pg_sleep`, large reads, `LOAD_FILE` for users with `FILE`) a
 ## Architecture
 
 ```
-MCP client ─stdio─► cli/src/mcp/server.ts ─► cli/src/mcp/tools.ts   (schemas, descriptions, error mapping)
+MCP client ─stdio─► cli/src/mcp/server.ts ─┐
+MCP client ─HTTP──► cli/src/mcp/http.ts   ─┴► cli/src/mcp/tools.ts   (schemas, descriptions, error mapping)
+                    (daemon.ts: start/stop/status/logs)
                                                    │
                                                    ▼
                               core/src/bridge.ts   createBridge(registry)
@@ -78,7 +118,7 @@ MCP client ─stdio─► cli/src/mcp/server.ts ─► cli/src/mcp/tools.ts   (s
 ## Testing
 
 ```bash
-cd packages/cli  && bunx vitest run     # in-memory MCP client: tool list, size budget, error mapping, no secrets
+cd packages/cli  && bunx vitest run     # in-memory + HTTP MCP client: tool list, size budget, error mapping, token/Origin/Host guards, port fallback
 cd packages/core && DEEBEEBRIDGE_TEST_PG=… DEEBEEBRIDGE_TEST_MYSQL=… bunx vitest run   # live: every tool path on both databases
 npx @modelcontextprotocol/inspector deebeebridge mcp   # manual
 ```

@@ -4,6 +4,10 @@
 [`pg`](https://node-postgres.com). Read [connections.md](connections.md) first for how
 connections are stored and used.
 
+## Dates
+
+`date` and `timestamp` (without time zone) come back as stored text (`2026-10-27 18:30:00`), not converted by this machine's time zone. `timestamptz` is a real instant and comes back as ISO-8601 UTC.
+
 ## Adding a connection
 
 ```bash

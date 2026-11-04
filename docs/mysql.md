@@ -3,6 +3,10 @@
 `type: "mysql"`, implemented in `packages/core/src/drivers/mysql.ts` on top of
 [`mysql2`](https://sidorares.github.io/node-mysql2/docs). Read [connections.md](connections.md) first.
 
+## Dates
+
+`DATE`, `DATETIME` and `TIMESTAMP` values come back as the text MySQL stores (`2026-10-27 18:30:00`), not converted by this machine's time zone.
+
 ## Adding a connection
 
 ```bash
