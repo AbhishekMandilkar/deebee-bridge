@@ -1,0 +1,19 @@
+{
+  "name": "deebeebridge",
+  "owner": {
+    "name": "Abhishek Mandilkar",
+    "url": "https://github.com/AbhishekMandilkar"
+  },
+  "metadata": {
+    "description": "Give Claude access to your databases by connection name, without sharing credentials."
+  },
+  "plugins": [
+    {
+      "name": "deebeebridge",
+      "source": "./packages/cli",
+      "description": "Query PostgreSQL and MySQL from Claude by connection name. Passwords stay on your machine; writes are blocked unless you allow them.",
+      "category": "database",
+      "keywords": ["mcp", "database", "postgres", "mysql", "sql"]
+    }
+  ]
+}
