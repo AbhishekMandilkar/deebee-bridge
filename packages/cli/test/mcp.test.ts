@@ -129,3 +129,29 @@ describe("tool calls", () => {
 		expect(text(r)).not.toContain("s3cret-pw");
 	});
 });
+
+describe("no saved connections", () => {
+	it("list_connections tells the agent how the user adds one, outside the chat", async () => {
+		const empty = createBridge(
+			createRegistry({
+				config: configStore(await mkdtemp(join(tmpdir(), "dbb-mcp-empty-"))),
+				secrets: memorySecrets(),
+			}),
+		);
+		const [a, b] = InMemoryTransport.createLinkedPair();
+		await createMcpServer(empty).connect(a);
+		const c = new Client({ name: "test", version: "0" });
+		await c.connect(b);
+		try {
+			const r = await c.callTool({ name: "list_connections", arguments: {} });
+			expect(r.isError).toBeFalsy();
+			const body = JSON.parse(text(r));
+			expect(body.connections).toEqual([]);
+			expect(body.hint).toMatch(/npx deebeebridge add/);
+			expect(body.hint).toMatch(/terminal/);
+		} finally {
+			await c.close();
+			await empty.close();
+		}
+	});
+});
