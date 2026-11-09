@@ -12,6 +12,25 @@ Supports **PostgreSQL** and **MySQL**. ClickHouse is planned.
 
 Requires Node 20+.
 
+**Claude Code plugin** (adds the MCP server and the `/dbb` command; no npm install needed):
+
+```
+/plugin install deebeebridge --marketplace AbhishekMandilkar/deebee-bridge
+```
+
+On Claude Code older than 2.1.275, add the marketplace first:
+
+```
+/plugin marketplace add AbhishekMandilkar/deebee-bridge
+/plugin install deebeebridge@deebeebridge
+```
+
+The plugin runs the server with `npx`, so there is no `deebeebridge` command on your PATH: put `npx` in front
+of the commands below (`npx deebeebridge add`). Save connections in your own terminal, never in the chat.
+Connections live on your machine, so the plugin works with Claude Code running locally, not in cloud sessions.
+
+**Command line** (any MCP client):
+
 ```bash
 npm i -g deebeebridge
 deebeebridge --help
@@ -33,7 +52,7 @@ ln -s "$PWD/dist/cli.js" ~/.local/bin/deebeebridge   # any directory on your PAT
 **1. Save a connection** (interactive; the password prompt is masked):
 
 ```bash
-deebeebridge add
+deebeebridge add          # plugin users: npx deebeebridge add
 ```
 
 Or paste a connection URL (Postgres: `postgres://` or `postgresql://`; MySQL: `mysql://`). It supplies the
@@ -65,22 +84,7 @@ deebeebridge list          # table of saved connections (add --json for scripts)
 deebeebridge test app-db   # connects and prints latency
 ```
 
-**3. Connect your agent:**
-
-Claude Code, as a plugin (adds the MCP server and the `/dbb` command; runs the server with `npx`):
-
-```
-/plugin install deebeebridge --marketplace AbhishekMandilkar/deebee-bridge
-```
-
-On Claude Code older than 2.1.275, add the marketplace first:
-
-```
-/plugin marketplace add AbhishekMandilkar/deebee-bridge
-/plugin install deebeebridge@deebeebridge
-```
-
-Or add only the MCP server, using the globally installed command:
+**3. Connect your agent** (the Claude Code plugin is already connected; skip this step):
 
 ```bash
 claude mcp add deebeebridge -- deebeebridge mcp     # Claude Code

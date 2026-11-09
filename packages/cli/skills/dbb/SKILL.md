@@ -12,7 +12,7 @@ Request (the text after the skill name): $ARGUMENTS
 ## Steps
 
 1. **Project notes.** Read `.dbb.md` in the project root when it exists. It names this project's default connection, databases, tables, and what phrases like "last logged in user" mean.
-2. **Connection.** Use the default from the notes. Without one, call `list_connections` and pick by name and database. Ask the user only when two connections fit equally well. An empty request ends here: list the connections and their tables.
+2. **Connection.** Use the default from the notes. Without one, call `list_connections` and pick by name and database. Ask the user only when two connections fit equally well. An empty request ends here: list the connections and their tables. No connections saved: tell the user to run `npx deebeebridge add` in their own terminal and stop. Never ask for a password or connection URL in the chat.
 3. **Table.** Take it from the notes when listed there; otherwise call `list_tables` and choose the best match for the request. A connection can hold several databases: call `list_databases` when the table is not in the connection's own, and pass `database` to the other tools to use another one.
 4. **Columns.** Call `describe_table` on every table you query, before the query. Column names come from its result.
    A column that references another record (`createdBy`, `user_id`) means a name is needed for a readable answer: find the table it points to, in other databases too, and look the value up or join to it.

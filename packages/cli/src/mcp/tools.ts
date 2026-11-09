@@ -9,6 +9,11 @@ const connection = z.string();
 const schema = z.string().optional();
 const database = z.string().optional();
 
+// Returned only when nothing is saved. Credentials must never pass through the chat,
+// so the agent points the user at their own terminal instead of offering to take them.
+const NO_CONNECTIONS_HINT =
+	"No connections saved. Ask the user to run `npx deebeebridge add` in their own terminal, then try again. Never ask for a password or connection URL in the chat.";
+
 type Result = { content: { type: "text"; text: string }[]; isError?: boolean };
 
 const ok = (value: unknown): Result => ({
@@ -39,7 +44,13 @@ export function registerTools(server: McpServer, bridge: Bridge): void {
 				"List saved database connections (name, type, default database, mode). Call first; other tools take a connection name. A connection can hold several databases: see list_databases.",
 			annotations: readOnly,
 		},
-		() => run(() => bridge.listConnections()),
+		() =>
+			run(async () => {
+				const connections = await bridge.listConnections();
+				return connections.length > 0
+					? connections
+					: { connections, hint: NO_CONNECTIONS_HINT };
+			}),
 	);
 
 	server.registerTool(
