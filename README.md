@@ -67,6 +67,21 @@ deebeebridge test app-db   # connects and prints latency
 
 **3. Connect your agent:**
 
+Claude Code, as a plugin (adds the MCP server and the `/dbb` command; runs the server with `npx`):
+
+```
+/plugin install deebeebridge --marketplace AbhishekMandilkar/deebee-bridge
+```
+
+On Claude Code older than 2.1.275, add the marketplace first:
+
+```
+/plugin marketplace add AbhishekMandilkar/deebee-bridge
+/plugin install deebeebridge@deebeebridge
+```
+
+Or add only the MCP server, using the globally installed command:
+
 ```bash
 claude mcp add deebeebridge -- deebeebridge mcp     # Claude Code
 ```

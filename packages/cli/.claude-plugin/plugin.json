@@ -1,0 +1,13 @@
+{
+  "name": "deebeebridge",
+  "version": "0.5.0",
+  "description": "Query PostgreSQL and MySQL from Claude by connection name. Passwords stay on your machine; writes are blocked unless you allow them.",
+  "author": {
+    "name": "Abhishek Mandilkar",
+    "url": "https://github.com/AbhishekMandilkar"
+  },
+  "homepage": "https://github.com/AbhishekMandilkar/deebee-bridge#readme",
+  "repository": "https://github.com/AbhishekMandilkar/deebee-bridge",
+  "license": "MIT",
+  "keywords": ["mcp", "database", "postgres", "mysql", "sql"]
+}
